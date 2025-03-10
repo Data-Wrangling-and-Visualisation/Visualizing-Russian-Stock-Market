@@ -242,7 +242,6 @@
 {"DIV_TICK":"MOEX","isin":"RU000A0JR4A1","registryclosedate":"2023-05-12","value":"4.84","currencyid":"RUB"}
 {"DIV_TICK":"MOEX","isin":"RU000A0JR4A1","registryclosedate":"2023-06-16","value":"4.84","currencyid":"RUB"}
 {"DIV_TICK":"MOEX","isin":"RU000A0JR4A1","registryclosedate":"2024-06-14","value":"17.35","currencyid":"RUB"}
-{"DIV_TICK":"MOEX","isin":"RU000A0JR4A1","registryclosedate":"2111-01-01","value":"17.35","currencyid":"RUB"}
 {"DIV_TICK":"SNGS","isin":"RU0008926258","registryclosedate":"2019-07-18","value":"0.65","currencyid":"RUB"}
 {"DIV_TICK":"SNGS","isin":"RU0008926258","registryclosedate":"2020-07-20","value":"0.65","currencyid":"RUB"}
 {"DIV_TICK":"SNGS","isin":"RU0008926258","registryclosedate":"2021-07-20","value":"0.7","currencyid":"RUB"}
