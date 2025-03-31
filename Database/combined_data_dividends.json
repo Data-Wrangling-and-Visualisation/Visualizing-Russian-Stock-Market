@@ -26,6 +26,7 @@
 {"DIV_TICK":"PHOR","isin":"RU000A0JRKT8","registryclosedate":"2024-09-22","value":"117","currencyid":"RUB"}
 {"DIV_TICK":"PHOR","isin":"RU000A0JRKT8","registryclosedate":"2024-12-22","value":"126","currencyid":"RUB"}
 {"DIV_TICK":"PHOR","isin":"RU000A0JRKT8","registryclosedate":"2025-04-20","value":"171","currencyid":"RUB"}
+{"DIV_TICK":"PHOR","isin":"RU000A0JRKT8","registryclosedate":"2025-06-09","value":"171","currencyid":"RUB"}
 {"DIV_TICK":"GMKN","isin":"RU0007288411","registryclosedate":"2019-06-21","value":"792.52","currencyid":"RUB"}
 {"DIV_TICK":"GMKN","isin":"RU0007288411","registryclosedate":"2019-10-07","value":"883.93","currencyid":"RUB"}
 {"DIV_TICK":"GMKN","isin":"RU0007288411","registryclosedate":"2019-12-27","value":"604.09","currencyid":"RUB"}
@@ -102,6 +103,7 @@
 {"DIV_TICK":"LKOH","isin":"RU0009024277","registryclosedate":"2023-12-17","value":"447","currencyid":"RUB"}
 {"DIV_TICK":"LKOH","isin":"RU0009024277","registryclosedate":"2024-05-07","value":"498","currencyid":"RUB"}
 {"DIV_TICK":"LKOH","isin":"RU0009024277","registryclosedate":"2024-12-17","value":"514","currencyid":"RUB"}
+{"DIV_TICK":"LKOH","isin":"RU0009024277","registryclosedate":"2025-06-03","value":"541","currencyid":"RUB"}
 {"DIV_TICK":"ROSN","isin":"RU000A0J2Q06","registryclosedate":"2019-06-17","value":"11.33","currencyid":"RUB"}
 {"DIV_TICK":"ROSN","isin":"RU000A0J2Q06","registryclosedate":"2019-10-11","value":"15.34","currencyid":"RUB"}
 {"DIV_TICK":"ROSN","isin":"RU000A0J2Q06","registryclosedate":"2020-06-15","value":"18.07","currencyid":"RUB"}
@@ -266,12 +268,14 @@
 {"DIV_TICK":"NVTK","isin":"RU000A0DKVS5","registryclosedate":"2023-10-10","value":"34.5","currencyid":"RUB"}
 {"DIV_TICK":"NVTK","isin":"RU000A0DKVS5","registryclosedate":"2024-03-26","value":"44.09","currencyid":"RUB"}
 {"DIV_TICK":"NVTK","isin":"RU000A0DKVS5","registryclosedate":"2024-10-11","value":"35.5","currencyid":"RUB"}
+{"DIV_TICK":"NVTK","isin":"RU000A0DKVS5","registryclosedate":"2025-04-28","value":"46.65","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2019-05-31","value":"0.171635536398468","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2020-06-01","value":"0.196192528735633","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2021-06-07","value":"0.180711206896552","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2022-06-10","value":"0.23658380041773","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2023-05-30","value":"0.28365531801897","currencyid":"RUB"}
 {"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2024-06-03","value":"0.325999263608046","currencyid":"RUB"}
+{"DIV_TICK":"IRAO","isin":"RU000A0JPNM1","registryclosedate":"2025-06-09","value":"0.353756516888506","currencyid":"RUB"}
 {"DIV_TICK":"RTKM","isin":"RU0008943394","registryclosedate":"2019-01-13","value":"2.5","currencyid":"RUB"}
 {"DIV_TICK":"RTKM","isin":"RU0008943394","registryclosedate":"2019-07-04","value":"2.5","currencyid":"RUB"}
 {"DIV_TICK":"RTKM","isin":"RU0008943394","registryclosedate":"2020-08-21","value":"5","currencyid":"RUB"}
@@ -295,3 +299,4 @@
 {"DIV_TICK":"PLZL","isin":"RU000A0JNAA8","registryclosedate":"2021-10-11","value":"267.48","currencyid":"RUB"}
 {"DIV_TICK":"PLZL","isin":"RU000A0JNAA8","registryclosedate":"2023-06-16","value":"436.79","currencyid":"RUB"}
 {"DIV_TICK":"PLZL","isin":"RU000A0JNAA8","registryclosedate":"2024-12-13","value":"1301.75","currencyid":"RUB"}
+{"DIV_TICK":"PLZL","isin":"RU000A0JNAA8","registryclosedate":"2025-04-25","value":"73","currencyid":"RUB"}
