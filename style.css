@@ -168,3 +168,130 @@ svg {
     text-anchor: middle;
     fill: #0077b6;
 }
+
+/* Main container for index structure */
+.index-structure-container {
+    margin-top: 30px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 20px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+/* Index selector dropdown */
+.index-selector {
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.index-selector select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    min-width: 200px;
+}
+
+/* Container for both charts */
+.structure-charts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Individual chart containers */
+.structure-chart {
+    flex: 1 1 45%;
+    min-width: 300px;
+    max-width: 600px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: white;
+    padding-left: 20px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Chart titles */
+.chart-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+    text-align: center;
+}
+
+/* Tooltip styling */
+.tooltip {
+    position: absolute;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    border-radius: 6px;
+    pointer-events: none;
+    font-size: 14px;
+    line-height: 1.4;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+    z-index: 100;
+}
+
+/* Legend styling */
+.legend {
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+}
+
+.legend rect {
+    stroke: #fff;
+    stroke-width: 1px;
+}
+
+/* Axis styling */
+.axis text {
+    font-size: 12px;
+    fill: #666;
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #ddd;
+    shape-rendering: crispEdges;
+}
+
+/* Grid lines */
+.grid line {
+    stroke: #eee;
+    stroke-opacity: 0.7;
+    shape-rendering: crispEdges;
+}
+
+.grid path {
+    stroke-width: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .structure-charts {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .structure-chart {
+        flex: 1 1 100%;
+        min-width: auto;
+    }
+    
+    .index-selector {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

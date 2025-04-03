@@ -28,6 +28,33 @@
         <div id ="additional_content">
             
         </div>
+
+        <div class="index-structure-container">
+            <h2 style="margin-left: 2%;">Данные по индексам MOEX</h2>
+            <div class="index-selector">
+                <label for="index-select" style="margin-left: 2%;">Выберите индекс: </label>
+                <select id="index-select">
+                    <option value="IMOEX">IMOEX</option>
+                    <option value="IMOEX2">IMOEX2</option>
+                    <option value="RTSI">RTSI</option>
+                    <option value="IMOEXCNY">IMOEXCNY</option>
+                    <option value="MOEXBC">MOEXBC</option>
+                    <option value="MOEXOG">MOEXOG</option>
+                    <option value="MOEXEU">MOEXEU</option>
+                    <option value="MOEXTL">MOEXTL</option>
+                    <option value="MOEXMM">MOEXMM</option>
+                    <option value="MOEXFN">MOEXFN</option>
+                </select>
+            </div>
+            <div class="structure-charts">
+                <div id="pie-chart" class="structure-chart">
+                    <p>Ticker composition will be shown here</p>
+                </div>
+                <div id="bar-chart" class="structure-chart">
+                    <p>Sector weights will be shown here</p>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="script.js"></script>

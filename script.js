@@ -3,6 +3,9 @@ const config = {
     defaultTicker: 'SBER',
     dataUrl: 'Data.json',
     dataDividend:'div.json',
+    dataIndex:'combined_data_index.json',
+    indexStructure: 'index_structure.json',
+    indexIndustryStructure: 'index_industry_structure.json',
     mainChart: {
         height: 400,
         margin: { top: 40, right: 40, bottom: 30, left: 60 },
@@ -11,6 +14,11 @@ const config = {
     volumeChart: {
         height: 150,
         margin: { top: 30, right: 40, bottom: 40, left: 80 }
+    },
+    structureCharts: {
+        width: 500,
+        height: 400,
+        margin: {top: 40, right: 30, bottom: 60, left: 60}
     }
 };
 
@@ -20,13 +28,23 @@ let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
+let moexData = {
+    composition: {},
+    sectors: {}
+};
+let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+let structureTooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
 
 async function initApp() {
     setupUI();
     await loadData(currentTicker);
+    await loadIndexData();
     createCombinedCharts(filteredData, currentTicker);
     createDividend(filter_dividends)
     setupPeriodButtons();
+    updateStructureCharts();  
 }
 
 async function loadData(ticker) {
@@ -43,6 +61,39 @@ async function loadData(ticker) {
         filter_dividends = [...dividends];
         currentTicker = ticker;
         fetchDictionary();
+}
+
+async function loadIndexData() {
+    try {
+        console.log('Loading index data from:', {
+            structure: config.indexStructure,
+            industry: config.indexIndustryStructure
+        });
+
+        const [structureRes, industryRes] = await Promise.all([
+            fetch(config.indexStructure).then(res => {
+                if (!res.ok) throw new Error(`Structure data failed: ${res.status}`);
+                return res.json();
+            }),
+            fetch(config.indexIndustryStructure).then(res => {
+                if (!res.ok) throw new Error(`Industry data failed: ${res.status}`);
+                return res.json();
+            })
+        ]);
+
+        console.log('Successfully loaded:', {
+            structureKeys: Object.keys(structureRes),
+            industryKeys: Object.keys(industryRes)
+        });
+
+        moexData.composition = structureRes;
+        moexData.sectors = industryRes;
+
+    } catch (error) {
+        console.error("Error loading index data:", error);
+        moexData = { composition: {}, sectors: {} };
+        
+    }
 }
 
 async function fetchDividendData(){
@@ -70,8 +121,6 @@ async function fetchDictionary(){
 })
 .catch(error => console.error("Ошибка загрузки словаря:", error));
 }
-
-
 
 function setupUI() {
     const headerSearch = document.getElementById('headerSearch');
@@ -445,6 +494,235 @@ function addBrush(svg, data, width, height) {
         updateMainChart(filtered);
     }
 }
+
+function updateStructureCharts() {
+    const selectedIndex = document.getElementById("index-select").value;
+    const tickerData = processTickerData(selectedIndex);
+    const sectorData = processSectorData(selectedIndex);
+    
+    const indexName = moexData.composition[selectedIndex]?.name || 
+                     moexData.sectors[selectedIndex]?.name || 
+                     selectedIndex;
+    if (tickerData.length > 0) {
+        
+        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, indexName);
+    } else {
+        d3.select("#pie-chart").html("<p>No ticker data available</p>");
+    }
+    
+    if (sectorData.length > 0) {
+        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, indexName);
+    } else {
+        d3.select("#bar-chart").html("<p>No sector data available</p>");
+    }
+}
+
+function processTickerData(index) {
+    if (!moexData.composition[index] || !moexData.composition[index].composition) {
+        console.warn(`No composition data for ${index}`);
+        return [];
+    }
+    
+    return Object.entries(moexData.composition[index].composition)
+        .filter(([ticker]) => ticker !== "Others")
+        .map(([ticker, weight]) => ({
+            name: ticker,
+            value: weight
+        }));
+}
+
+function processSectorData(index) {
+    if (!moexData.sectors || !moexData.sectors[index] || !moexData.sectors[index].sector_weights) {
+        console.warn(`No sector data for ${index}`);
+        return [];
+    }
+
+    return Object.entries(moexData.sectors[index].sector_weights)
+        .map(([sector, weight]) => ({
+            name: sector,
+            value: parseFloat(weight) || 0  // Ensure numeric value
+        }))
+        .filter(d => d.value > 0);  // Only include positive values
+}
+
+function createPieChart(data, containerId, title, indexName) {
+    const container = d3.select(`#${containerId}`);
+    container.selectAll("*").remove();
+    
+    const containerWidth = container.node().getBoundingClientRect().width;
+    const width = containerWidth - 40; // Account for padding
+    const height = 400;
+    const radius = Math.min(width, height) / 2 - 40;
+    
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${width/2 - 50},${height/2})`);
+    
+    const pie = d3.pie().value(d => d.value);
+    const arc = d3.arc().innerRadius(0).outerRadius(radius);
+    
+    const arcs = pie(data);
+    
+    svg.selectAll("path")
+        .data(arcs)
+        .enter().append("path")
+        .attr("d", arc)
+        .attr("fill", (d, i) => d3.schemeTableau10[i % 10])
+        .attr("stroke", "white")
+        .on("mouseover", function(event, d) {
+            d3.select(this).attr("opacity", 0.8);
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`${d.data.name}<br>${d.data.value}%`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function() {
+            d3.select(this).attr("opacity", 1);
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+    
+    // Add title
+    svg.append("text")
+        .attr("y", -height/2 + 20)
+        .attr("text-anchor", "middle")
+        .text(title)  // Use the title parameter
+        .style("font-size", "16px")
+        .style("font-weight", "bold");
+    
+    // Add legend
+    const legend = svg.selectAll(".legend")
+    .data(data)
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", (d, i) => `translate(${width/2 - 70},${-height/2 + 40 + i * 20})`);
+
+    legend.append("rect")
+    .attr("width", 16)
+    .attr("height", 16)
+    .attr("fill", (d, i) => colorScale(i));
+
+    legend.append("text")
+    .attr("x", 24)
+    .attr("y", 12)
+    .text(d => `${d.name} (${d.value}%)`)  // Changed from d.ticker to d.name
+    .style("font-size", "12px");
+    }
+
+function createBarChart(data, containerId, title, indexName) {
+
+    const container = d3.select(`#${containerId}`);
+    container.selectAll("*").remove();
+
+    const containerWidth = container.node().getBoundingClientRect().width;
+    const width = containerWidth - 40; // Account for padding
+    const height = 400;
+    const margin = {top: 40, right: 30, bottom: 100, left: 60};
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    // Filter valid data
+    const validData = data.filter(d => 
+        d.name && !isNaN(d.value) && d.value > 0
+    );
+
+    const x = d3.scaleBand()
+        .domain(validData.map(d => d.name))
+        .range([0, innerWidth])
+        .padding(0.2);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(validData, d => d.value) * 1.1])
+        .range([innerHeight, 0]);
+
+    // Bars
+    svg.selectAll(".bar")
+        .data(validData)
+        .enter().append("rect")
+        .attr("class", "bar")
+        .attr("x", d => x(d.name))
+        .attr("y", d => y(d.value))
+        .attr("width", x.bandwidth())
+        .attr("height", d => innerHeight - y(d.value))
+        .attr("fill", (d, i) => d3.schemeTableau10[i % 10])
+        .on("mouseover", function(event, d) {
+            d3.select(this).attr("opacity", 0.8);
+            tooltip.transition()
+                .duration(200)
+                .style("opacity", .9);
+            tooltip.html(`${d.name}<br>${d.value.toFixed(1)}%`)  // Updated to use name/value
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        })
+        .on("mouseout", function() {
+            d3.select(this).attr("opacity", 1);
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 0);
+        });
+
+    // X-axis with rotation
+    svg.append("g")
+        .attr("transform", `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+        .attr("transform", "rotate(-45)")
+        .attr("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", ".15em")
+        .style("font-size", "10px");
+
+    // Y-axis
+    svg.append("g")
+        .call(d3.axisLeft(y).ticks(5));
+
+    // Title
+    svg.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", -20)
+        .attr("text-anchor", "middle")
+        .text(title)
+        .style("font-size", "16px")
+        .style("font-weight", "bold");
+
+    // Add legend
+    const legend = svg.selectAll(".legend")
+    .data(validData)
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", (d, i) => `translate(${innerWidth - 200},${20 + i * 20})`);
+
+    legend.append("rect")
+    .attr("width", 16)
+    .attr("height", 16)
+    .attr("fill", (d, i) => d3.schemeTableau10[i % 10]);
+
+    legend.append("text")
+    .attr("x", 24)
+    .attr("y", 12)
+    .text(d => `${d.name} (${d.value.toFixed(1)}%)`)
+    .style("font-size", "12px");
+}
+
+const tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+// Add event listener for index selection
+document.getElementById("index-select").addEventListener("change", updateStructureCharts);
 
 function updateMainChart(filteredData) {
     this.filteredData = filteredData;
