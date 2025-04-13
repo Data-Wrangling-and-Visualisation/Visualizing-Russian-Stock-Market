@@ -423,6 +423,7 @@ svg {
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 16px;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 .chart-select:hover {

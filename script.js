@@ -1018,7 +1018,7 @@ function createOpenPriceChart(tickerName) {
     updateChart();
 
     function updateChart() {
-        const periodData = filterDataByPeriod(tickerData, currentPeriod);
+        const periodData = filterByPeriodEx(tickerData, currentPeriod);
         
         x.domain(d3.extent(periodData, d => d.begin));
         y.domain([d3.min(periodData, d => d[currentPriceType]) * 0.99, 
@@ -1081,18 +1081,20 @@ function createOpenPriceChart(tickerName) {
         yAxisLabel.text(priceLabels[currentPriceType]);
     }
 
-    function filterDataByPeriod(data, period) {
-        if (period === "all") return data;
+    function filterByPeriodEx(data, period) {
+        if (period === "all" || data.length === 0) return data;
         
+        const lastDate = new Date(data[data.length - 1].begin);
         const days = periods.find(p => p.value === period)?.days || 365;
-        const cutoffDate = new Date();
+        
+        const cutoffDate = new Date(lastDate);
         cutoffDate.setDate(cutoffDate.getDate() - days);
         
         return data.filter(d => new Date(d.begin) >= cutoffDate);
     }
 
     function mousemove(event) {
-        const periodData = filterDataByPeriod(tickerData, currentPeriod);
+        const periodData = filterByPeriodEx(tickerData, currentPeriod);
         const x0 = x.invert(d3.pointer(event)[0]);
         const i = bisectDate(periodData, x0, 1);
         const d0 = periodData[i - 1];
