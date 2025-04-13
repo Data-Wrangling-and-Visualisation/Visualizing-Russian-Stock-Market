@@ -1,11 +1,6 @@
 
 const config = {
     defaultTicker: 'SBER',
-    dataUrl: 'Data.json',
-    dataDividend:'div.json',
-    dataIndex:'combined_data_index.json',
-    indexStructure: 'index_structure.json',
-    indexIndustryStructure: 'index_industry_structure.json',
     mainChart: {
         height: 400,
         margin: { top: 40, right: 40, bottom: 30, left: 60 },
@@ -54,9 +49,10 @@ async function initApp() {
     updateStructureCharts();  
 }
 
+
 async function loadData(ticker) {
-        const originalData = await fetchData();
-        const originalData2 = await fetchDataIndex();
+        const originalData = await fetchData('stock');
+        const originalData2 = await fetchData('index');
         allData = originalData.filter(item => item.STOCK_TICK === ticker && item.period === 'D')
                             .map(item => ({
                                 ...item,
@@ -70,29 +66,19 @@ async function loadData(ticker) {
                                 type: item.close >= item.open ? 'bullish' : 'bearish'
                             }));
         filteredData = [...allData];
-        const divData = await fetchDividendData();
+        const divData = await fetchData('dividend');
         dividends = divData.filter(item => item.DIV_TICK === ticker);
         filter_dividends = [...dividends];
         currentTicker = ticker;
-        fetchDictionary();
+        fetchData('dictionary');
 }
 
 async function loadIndexData() {
     try {
-        console.log('Loading index data from:', {
-            structure: config.indexStructure,
-            industry: config.indexIndustryStructure
-        });
 
         const [structureRes, industryRes] = await Promise.all([
-            fetch(config.indexStructure).then(res => {
-                if (!res.ok) throw new Error(`Structure data failed: ${res.status}`);
-                return res.json();
-            }),
-            fetch(config.indexIndustryStructure).then(res => {
-                if (!res.ok) throw new Error(`Industry data failed: ${res.status}`);
-                return res.json();
-            })
+            fetchData('indexStructure'),
+            fetchData('indexIndustryStructure')
         ]);
 
         console.log('Successfully loaded:', {
@@ -110,39 +96,47 @@ async function loadIndexData() {
     }
 }
 
-async function fetchDividendData(){
-    const response = await fetch(config.dataDividend);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+// async function fetchDividendData(){
+//     const response = await fetch(config.dataDividend);
+//     if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//     return await response.json();
+// }
+
+async function fetchData(type) {
+    if (type === "dictionary") {
+        fetch('http://127.0.0.1:5000/api/data/dictionary')
+        .then(response => response.json())
+        .then(data => {
+          tickerMap = data;
+          initAutocomplete();
+        })
+        .catch(error => console.error("Dictionary download error:", error));
+    } else {
+        const response = await fetch(`http://127.0.0.1:5000/api/data/${type}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        return await response.json();
     }
-    return await response.json();
 }
 
-async function fetchData() {
-    const response = await fetch(config.dataUrl);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-}
+// async function fetchDataIndex() {
+//     const response = await fetch(config.dataIndex);
+//     if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//     return await response.json();
+// }
 
-async function fetchDataIndex() {
-    const response = await fetch(config.dataIndex);
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-}
-
-async function fetchDictionary(){
-    fetch('tickerDictionary.json')
-.then(response => response.json())
-.then(data => {
-  tickerMap = data;
-  initAutocomplete();
-})
-.catch(error => console.error("Ошибка загрузки словаря:", error));
-}
+// async function fetchDictionary(){
+//     fetch('tickerDictionary.json')
+// .then(response => response.json())
+// .then(data => {
+//   tickerMap = data;
+//   initAutocomplete();
+// })
+// .catch(error => console.error("Ошибка загрузки словаря:", error));
+// }
 
 function setupUI() {
     const headerSearch = document.getElementById('headerSearch');

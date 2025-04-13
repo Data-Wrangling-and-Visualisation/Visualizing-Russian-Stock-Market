@@ -186,12 +186,51 @@ svg {
 }
 
 .index-selector select {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
+    position: relative;
+    min-width: 120px;
+    padding: 8px 32px 8px 12px;
+    border: 1px solid #dfe1e5;
     border-radius: 4px;
     background-color: white;
+    color: #3c4043;
     font-size: 14px;
-    min-width: 200px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    transition: all 0.2s ease;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235f6368'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.index-selector label {
+    font-weight: 500;
+    color: #3c4043;
+    font-size: 14px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.index-selector select:hover {
+    border-color: #dadce0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.index-selector select:focus {
+    outline: none;
+    border-color: #4285f4;
+    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+}
+
+.index-selector select:active {
+    border-color: #4285f4;
+}
+
+.index-selector select option {
+    padding: 8px;
+    background: white;
+    color: #3c4043;
 }
 
 .structure-charts {
