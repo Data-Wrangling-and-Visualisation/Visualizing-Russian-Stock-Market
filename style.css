@@ -94,7 +94,7 @@ header {
 
 svg {
     display: block;
-    margin: 0 auto;
+    margin-left: 0 auto;
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
@@ -142,10 +142,10 @@ text.title {
     fill: #0077b6;
 }
 #chart-container {
-    max-width: 95%; /* Уменьшаем максимальную ширину */
+    max-width: 95%;
     margin: 2rem auto;
     padding: 0 1rem;
-    overflow: hidden; /* Скрываем выходящие за пределы элементы */
+    overflow: hidden;
 }
 
 #main-chart, #volume-chart {
@@ -160,16 +160,15 @@ svg {
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-left: -10px; /* Сдвигаем немного влево */
+    margin-left: -10px;
 }
 
 .volume-title {
-    font-size: 14px !important; /* Уменьшаем размер шрифта */
+    font-size: 14px !important;
     text-anchor: middle;
     fill: #0077b6;
 }
 
-/* Main container for index structure */
 .index-structure-container {
     margin-top: 30px;
     border-top: 1px solid #e0e0e0;
@@ -179,7 +178,6 @@ svg {
     padding: 20px;
 }
 
-/* Index selector dropdown */
 .index-selector {
     margin: 20px 0;
     display: flex;
@@ -196,7 +194,6 @@ svg {
     min-width: 200px;
 }
 
-/* Container for both charts */
 .structure-charts {
     display: flex;
     flex-wrap: wrap;
@@ -205,7 +202,6 @@ svg {
     margin-top: 20px;
 }
 
-/* Individual chart containers */
 .structure-chart {
     flex: 1 1 45%;
     min-width: 300px;
@@ -220,7 +216,6 @@ svg {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Chart titles */
 .chart-title {
     font-size: 18px;
     font-weight: 600;
@@ -229,7 +224,6 @@ svg {
     text-align: center;
 }
 
-/* Tooltip styling */
 .tooltip {
     position: absolute;
     padding: 10px 15px;
@@ -243,7 +237,6 @@ svg {
     z-index: 100;
 }
 
-/* Legend styling */
 .legend {
     font-size: 12px;
     font-family: Arial, sans-serif;
@@ -254,7 +247,6 @@ svg {
     stroke-width: 1px;
 }
 
-/* Axis styling */
 .axis text {
     font-size: 12px;
     fill: #666;
@@ -267,7 +259,6 @@ svg {
     shape-rendering: crispEdges;
 }
 
-/* Grid lines */
 .grid line {
     stroke: #eee;
     stroke-opacity: 0.7;
@@ -278,7 +269,6 @@ svg {
     stroke-width: 0;
 }
 
-/* Responsive adjustments */
 @media (max-width: 768px) {
     .structure-charts {
         flex-direction: column;
@@ -294,4 +284,204 @@ svg {
         flex-direction: column;
         align-items: flex-start;
     }
+}
+
+#open-price-chart-container {
+    width: 87.5%;
+    height: 600px;
+    margin-top: 20px;
+    margin-left: 80px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    background: white;
+}
+
+.tooltip-text {
+    font-size: 12px;
+    font-weight: bold;
+    fill: #333;
+}
+
+.tooltip-text tspan:first-child {
+    font-weight: normal;
+    font-size: 11px;
+    fill: #666;
+}
+
+.tooltip-text tspan:last-child {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#open-price-chart-container .filter-container {
+    width: 98.5%;
+    padding: 8px;
+    background: #f8f8f8;
+    border-bottom: 1px solid #eee;
+}
+
+.filter-container {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #dfe1e5;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #5f6368;
+    transition: all 0.2s ease;
+    margin: 0 4px;
+}
+
+.filter-btn:hover {
+    background: #f1f3f4;
+    border-color: #dadce0;
+}
+
+.filter-btn.active {
+    background: #4285f4;
+    color: white;
+    border-color: #4285f4;
+    box-shadow: 0 1px 2px rgba(66,133,244,0.3);
+}
+
+.ticker-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: 12px;
+}
+
+.ticker-buttons .ticker-btn {
+    padding: 6px 12px;
+    border: 1px solid #dfe1e5;
+    background: white;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #3c4043;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.ticker-buttons .ticker-btn:hover {
+    background: #f1f3f4;
+    border-color: #dadce0;
+}
+
+.ticker-buttons .ticker-btn.active {
+    background: #e8f0fe;
+    color: #1967d2;
+    border-color: #d2e3fc;
+}
+
+.filter-container span {
+    font-size: 14px;
+    color: #5f6368;
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+.price-type-control,
+.period-control {
+    margin-right: 30px;
+    margin-left: 30px;
+    margin-bottom: 30px;
+}
+
+.price-type-control span,
+.period-control span {
+    font-size: 14px;
+    color: #5f6368;
+    font-weight: 500;
+}
+
+.chart-select {
+    position: relative;
+    min-width: 120px;
+    padding: 8px 32px 8px 12px;
+    border: 1px solid #dfe1e5;
+    border-radius: 4px;
+    background-color: white;
+    color: #3c4043;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    appearance: none;
+    transition: all 0.2s ease;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235f6368'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+}
+
+.chart-select:hover {
+    border-color: #dadce0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.chart-select:focus {
+    outline: none;
+    border-color: #4285f4;
+    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+}
+
+.chart-select:active {
+    border-color: #4285f4;
+}
+
+.chart-select option {
+    padding: 8px;
+    background: white;
+    color: #3c4043;
+}
+
+.ticker-hover-info {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 10px;
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 120px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.ticker-name {
+    font-weight: 500;
+}
+
+.price-change {
+    display: block;
+    font-size: 12px;
+}
+
+.price-change.positive {
+    color: #4CAF50;
+}
+
+.price-change.negative {
+    color: #F44336;
+}
+
+.open-price {
+    display: block;
+    font-size: 12px;
+    color: #666;
 }

@@ -23,6 +23,7 @@ const config = {
 };
 
 let allData = [];
+let allDataIndex = [];
 let filteredData = [];
 let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
@@ -36,20 +37,33 @@ let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 let structureTooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
+const tickerSets = {
+    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR"],
+    indices: ["IMOEX", "IMOEX2", "RTSI", "IMOEXCNY", "MOEXBC", "MOEXOG",
+        "MOEXEU", "MOEXTL", "MOEXMM", "MOEXFN"]
+}
 
 async function initApp() {
     setupUI();
     await loadData(currentTicker);
     await loadIndexData();
     createCombinedCharts(filteredData, currentTicker);
-    createDividend(filter_dividends)
+    createDividend(filter_dividends);
+    createOpenPriceChart(currentTicker);
     setupPeriodButtons();
     updateStructureCharts();  
 }
 
 async function loadData(ticker) {
         const originalData = await fetchData();
+        const originalData2 = await fetchDataIndex();
         allData = originalData.filter(item => item.STOCK_TICK === ticker && item.period === 'D')
+                            .map(item => ({
+                                ...item,
+                                begin: new Date(item.begin),
+                                type: item.close >= item.open ? 'bullish' : 'bearish'
+                            }));
+        allDataIndex = originalData2.filter(item => item.INDEX_TICK === ticker && item.period === 'D')
                             .map(item => ({
                                 ...item,
                                 begin: new Date(item.begin),
@@ -106,6 +120,14 @@ async function fetchDividendData(){
 
 async function fetchData() {
     const response = await fetch(config.dataUrl);
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+}
+
+async function fetchDataIndex() {
+    const response = await fetch(config.dataIndex);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -190,6 +212,7 @@ function initAutocomplete() {
       loadData(foundTicker).then(() => {
         createCombinedCharts(filteredData, foundTicker);
         createDividend(filter_dividends);
+        createOpenPriceChart(foundTicker);
       });
       return;
     }
@@ -203,6 +226,7 @@ function initAutocomplete() {
       loadData(ticker).then(() => {
         createCombinedCharts(filteredData, ticker);
         createDividend(filter_dividends);
+        createOpenPriceChart(ticker);
       });
     } else {
       alert("Ничего не найдено! Проверьте название или тикер.");
@@ -540,9 +564,9 @@ function processSectorData(index) {
     return Object.entries(moexData.sectors[index].sector_weights)
         .map(([sector, weight]) => ({
             name: sector,
-            value: parseFloat(weight) || 0  // Ensure numeric value
+            value: parseFloat(weight) || 0 
         }))
-        .filter(d => d.value > 0);  // Only include positive values
+        .filter(d => d.value > 0);
 }
 
 function createPieChart(data, containerId, title, indexName) {
@@ -550,7 +574,7 @@ function createPieChart(data, containerId, title, indexName) {
     container.selectAll("*").remove();
     
     const containerWidth = container.node().getBoundingClientRect().width;
-    const width = containerWidth - 40; // Account for padding
+    const width = containerWidth - 40;
     const height = 400;
     const radius = Math.min(width, height) / 2 - 40;
     
@@ -587,15 +611,13 @@ function createPieChart(data, containerId, title, indexName) {
                 .style("opacity", 0);
         });
     
-    // Add title
     svg.append("text")
         .attr("y", -height/2 + 20)
         .attr("text-anchor", "middle")
-        .text(title)  // Use the title parameter
+        .text(title)
         .style("font-size", "16px")
         .style("font-weight", "bold");
     
-    // Add legend
     const legend = svg.selectAll(".legend")
     .data(data)
     .enter()
@@ -611,7 +633,7 @@ function createPieChart(data, containerId, title, indexName) {
     legend.append("text")
     .attr("x", 24)
     .attr("y", 12)
-    .text(d => `${d.name} (${d.value}%)`)  // Changed from d.ticker to d.name
+    .text(d => `${d.name} (${d.value}%)`)
     .style("font-size", "12px");
     }
 
@@ -621,7 +643,7 @@ function createBarChart(data, containerId, title, indexName) {
     container.selectAll("*").remove();
 
     const containerWidth = container.node().getBoundingClientRect().width;
-    const width = containerWidth - 40; // Account for padding
+    const width = containerWidth - 40;
     const height = 400;
     const margin = {top: 40, right: 30, bottom: 100, left: 60};
     const innerWidth = width - margin.left - margin.right;
@@ -633,7 +655,6 @@ function createBarChart(data, containerId, title, indexName) {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Filter valid data
     const validData = data.filter(d => 
         d.name && !isNaN(d.value) && d.value > 0
     );
@@ -647,7 +668,6 @@ function createBarChart(data, containerId, title, indexName) {
         .domain([0, d3.max(validData, d => d.value) * 1.1])
         .range([innerHeight, 0]);
 
-    // Bars
     svg.selectAll(".bar")
         .data(validData)
         .enter().append("rect")
@@ -662,7 +682,7 @@ function createBarChart(data, containerId, title, indexName) {
             tooltip.transition()
                 .duration(200)
                 .style("opacity", .9);
-            tooltip.html(`${d.name}<br>${d.value.toFixed(1)}%`)  // Updated to use name/value
+            tooltip.html(`${d.name}<br>${d.value.toFixed(1)}%`)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 28) + "px");
         })
@@ -673,7 +693,6 @@ function createBarChart(data, containerId, title, indexName) {
                 .style("opacity", 0);
         });
 
-    // X-axis with rotation
     svg.append("g")
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x))
@@ -684,11 +703,9 @@ function createBarChart(data, containerId, title, indexName) {
         .attr("dy", ".15em")
         .style("font-size", "10px");
 
-    // Y-axis
     svg.append("g")
         .call(d3.axisLeft(y).ticks(5));
 
-    // Title
     svg.append("text")
         .attr("x", innerWidth / 2)
         .attr("y", -20)
@@ -697,7 +714,6 @@ function createBarChart(data, containerId, title, indexName) {
         .style("font-size", "16px")
         .style("font-weight", "bold");
 
-    // Add legend
     const legend = svg.selectAll(".legend")
     .data(validData)
     .enter()
@@ -721,7 +737,6 @@ const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-// Add event listener for index selection
 document.getElementById("index-select").addEventListener("change", updateStructureCharts);
 
 function updateMainChart(filteredData) {
@@ -826,3 +841,430 @@ function updateChartsWithData(data) {
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
+
+function createOpenPriceChart(tickerName) {
+    currentTicker = tickerName;
+    let tickerData = allData.filter(item => item.STOCK_TICK === tickerName);
+    let indData = allDataIndex.filter(item => item.INDEX_TICK === tickerName);
+
+    tickerData = [
+        ...tickerData.map(item => ({ ...item, dataType: 'stock' })),
+        ...indData.map(item => ({ ...item, dataType: 'index' }))
+      ];
+
+    const mainContainer = d3.select("#open-price-chart-container");
+    mainContainer.selectAll("*").remove();
+
+    setupFilterControls(tickerName);
+
+    const initialFilter = tickerSets.indices.includes(tickerName) ? "indices" : "stocks";
+    d3.select(`#open-price-chart-container #${initialFilter}-filter`).classed("active", true);
+    
+    updateOpenPriceChartTickerButtons(initialFilter);
+
+    mainContainer
+        .style("display", "flex")
+        .style("flex-direction", "column") 
+        .style("gap", "20px");
+
+    if (tickerData.length === 0) {
+        mainContainer.append("p").text(`Нет данных для ${tickerName}`);
+        return;
+    }
+
+    const chartContent = mainContainer.append("div")
+        .style("display", "flex")
+        .style("gap", "20px");
+    
+
+    const container = mainContainer.append("div")
+        .attr("class", "chart-main-content")
+        .style("flex-grow", "1");
+
+    const controls = container.append("div")
+        .attr("class", "chart-controls")
+        .style("margin-bottom", "10px")
+        .style("display", "flex")
+        .style("gap", "10px");
+
+    const priceTypes = [
+        {value: "open", label: "Открытие"},
+        {value: "close", label: "Закрытие"},
+        {value: "high", label: "Максимум"},
+        {value: "low", label: "Минимум"}
+    ];
+
+    controls.append("div")
+        .attr("class", "price-type-control")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .html(`
+            <span style="margin-right: 10px;">Тип цены:</span>
+            <select id="price-type-select" class="chart-select">
+                ${priceTypes.map(t => `<option value="${t.value}">${t.label}</option>`).join("")}
+            </select>
+        `);
+
+    const periods = [
+        {value: "5y", label: "5 лет", days: 365*5},
+        {value: "1y", label: "1 год", days: 365},
+        {value: "6m", label: "6 месяцев", days: 180},
+        {value: "1m", label: "1 месяц", days: 30},
+        {value: "1w", label: "1 неделя", days: 7}
+    ];
+
+    controls.append("div")
+        .attr("class", "period-control")
+        .style("display", "flex")
+        .style("align-items", "center")
+        .html(`
+            <span style="margin-right: 10px;">Период:</span>
+            <select id="period-select" class="chart-select">
+                ${periods.map(p => `<option value="${p.value}">${p.label}</option>`).join("")}
+            </select>
+        `);
+
+    let currentPriceType = "open";
+    let currentPeriod = "5y";
+
+    const width = container.node().getBoundingClientRect().width - 300
+    const height = 310;
+    const margin = {top: 50, right: 100, bottom: 0, left: 150};
+    const innerWidth = width;
+    const innerHeight = height;
+
+    const svg = container.append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const x = d3.scaleTime().range([0, innerWidth]);
+    const y = d3.scaleLinear().range([innerHeight, 0]);
+
+    const line = d3.line()
+        .x(d => x(d.begin))
+        .curve(d3.curveMonotoneX);
+
+    const path = svg.append("path")
+        .attr("class", "price-line")
+        .attr("fill", "none")
+        .attr("stroke", "#4285f4")
+        .attr("stroke-width", 2);
+
+    const focus = svg.append("g")
+        .attr("class", "focus")
+        .style("display", "none");
+
+    focus.append("circle")
+        .attr("r", 5)
+        .attr("fill", "#F44336")
+        .attr("stroke", "white")
+        .attr("stroke-width", 2);
+
+    focus.append("text")
+        .attr("class", "tooltip-text")
+        .attr("x", 10)
+        .attr("dy", "0.35em");
+
+    svg.append("rect")
+        .attr("class", "overlay")
+        .attr("width", innerWidth)
+        .attr("height", innerHeight)
+        .style("fill", "none")
+        .style("pointer-events", "all")
+        .on("mouseover", () => focus.style("display", null))
+        .on("mouseout", () => focus.style("display", "none"))
+        .on("mousemove", mousemove);
+
+    const xAxis = svg.append("g")
+        .attr("class", "x-axis")
+        .attr("transform", `translate(0,${innerHeight})`);
+
+    const yAxis = svg.append("g")
+        .attr("class", "y-axis");
+
+    const title = svg.append("text")
+        .attr("x", innerWidth / 2)
+        .attr("y", -10)
+        .attr("text-anchor", "middle")
+        .style("font-size", "16px")
+        .style("font-weight", "bold");
+
+    svg.append("text")
+        .attr("class", "x-axis-label")
+        .attr("x", innerWidth / 2)
+        .attr("y", innerHeight + 35)
+        .attr("text-anchor", "middle")
+        .text("Дата");
+
+    const yAxisLabel = svg.append("text")
+        .attr("class", "y-axis-label")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -innerHeight / 2)
+        .attr("y", -50)
+        .attr("text-anchor", "middle");
+
+    d3.select("#price-type-select").on("change", function() {
+        currentPriceType = this.value;
+        updateChart();
+    });
+
+    d3.select("#period-select").on("change", function() {
+        currentPeriod = this.value;
+        updateChart();
+    });
+
+    updateChart();
+
+    function updateChart() {
+        const periodData = filterDataByPeriod(tickerData, currentPeriod);
+        
+        x.domain(d3.extent(periodData, d => d.begin));
+        y.domain([d3.min(periodData, d => d[currentPriceType]) * 0.99, 
+                    d3.max(periodData, d => d[currentPriceType]) * 1.01]);
+
+        line.y(d => y(d[currentPriceType]));
+
+        path.datum(periodData)
+            .transition()
+            .duration(500)
+            .attr("d", line);
+
+        let xAxisFormatter;
+        let tickValues;
+        
+        if (currentPeriod === "1w") {
+            xAxisFormatter = d3.axisBottom(x)
+                .tickFormat(d3.timeFormat("%a %d.%m"));
+            
+            tickValues = d3.timeDays(
+                d3.timeDay.floor(x.domain()[0]), 
+                d3.timeDay.ceil(x.domain()[1])
+            );
+            
+        } else if (currentPeriod === "1m") {
+            xAxisFormatter = d3.axisBottom(x)
+                .tickFormat(d3.timeFormat("%d.%m"));
+            
+            const daysInRange = d3.timeDay.count(
+                d3.timeDay.floor(x.domain()[0]), 
+                d3.timeDay.ceil(x.domain()[1])
+            );
+            const tickInterval = Math.max(1, Math.floor(daysInRange / 7));
+            
+            tickValues = d3.timeDays(
+                d3.timeDay.floor(x.domain()[0]), 
+                d3.timeDay.ceil(x.domain()[1]),
+                tickInterval
+            );
+            
+        } else {
+            xAxisFormatter = d3.axisBottom(x)
+                .tickFormat(d3.timeFormat("%b %Y"));
+        }
+
+        xAxis.transition().duration(500)
+            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter);
+        
+        yAxis.transition().duration(500)
+            .call(d3.axisLeft(y));
+
+        const priceLabels = {
+            open: "Цена открытия",
+            close: "Цена закрытия",
+            high: "Максимальная цена",
+            low: "Минимальная цена"
+        };
+        
+        title.text(`${priceLabels[currentPriceType]} для ${tickerName}`);
+        yAxisLabel.text(priceLabels[currentPriceType]);
+    }
+
+    function filterDataByPeriod(data, period) {
+        if (period === "all") return data;
+        
+        const days = periods.find(p => p.value === period)?.days || 365;
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        
+        return data.filter(d => new Date(d.begin) >= cutoffDate);
+    }
+
+    function mousemove(event) {
+        const periodData = filterDataByPeriod(tickerData, currentPeriod);
+        const x0 = x.invert(d3.pointer(event)[0]);
+        const i = bisectDate(periodData, x0, 1);
+        const d0 = periodData[i - 1];
+        const d1 = periodData[i];
+        const d = x0 - d0.begin > d1.begin - x0 ? d1 : d0;
+        
+        const formattedDate = formatDate(d.begin);
+        const priceLabels = {
+            open: "Открытие",
+            close: "Закрытие", 
+            high: "Максимум",
+            low: "Минимум"
+        };
+        
+        focus.attr("transform", `translate(${x(d.begin)},${y(d[currentPriceType])})`);
+        
+        const tooltipText = focus.select("text.tooltip-text")
+            .html("");
+        
+        tooltipText.selectAll("tspan")
+            .data([
+                `${priceLabels[currentPriceType]} ${formattedDate}:`,
+                `${d[currentPriceType].toFixed(2)}`
+            ])
+            .enter()
+            .append("tspan")
+            .attr("x", 10)
+            .attr("dy", (d, i) => i ? "1.2em" : 0)
+            .text(d => d);
+    }
+
+    const bisectDate = d3.bisector(d => d.begin).left;
+
+    function formatDate(date) {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}.${month}.${year}`;
+    }
+}
+
+function setupFilterControls(tickerName) {
+    const chartContainer = document.getElementById('open-price-chart-container');
+    
+    const filterContainer = document.createElement("div");
+    const isInd = tickerSets.indices.includes(tickerName);
+    const initialFilter = isInd ? "indices" : "stocks";
+    filterContainer.className = "filter-container";
+    filterContainer.style.margin = "10px 0";
+    filterContainer.style.display = "flex";
+    filterContainer.style.alignItems = "center";
+    filterContainer.style.gap = "10px";
+
+    filterContainer.innerHTML = `
+        <span>Показать:</span>
+        <button id="stocks-filter" class="filter-btn ${!isInd ? 'active' : ''}">Акции</button>
+        <button id="indices-filter" class="filter-btn ${isInd? 'active' : ''}">Индексы</button>
+        <div id="ticker-buttons" class="ticker-buttons"></div>
+    `;
+
+    chartContainer.insertBefore(filterContainer, chartContainer.firstChild);
+
+    document.getElementById("stocks-filter").addEventListener("click", () => {
+        handleOpenPriceChartFilter("stocks");
+    });
+    document.getElementById("indices-filter").addEventListener("click", () => {
+        handleOpenPriceChartFilter("indices");
+    });
+
+    filterContainer.dataset.currentFilter = initialFilter;
+    
+    updateOpenPriceChartTickerButtons(initialFilter);
+}
+
+function handleOpenPriceChartFilter(type) {
+    d3.selectAll('#open-price-chart-container .filter-btn')
+        .classed("active", function() {
+            return this.id === `${type}-filter`;
+        });
+    
+    updateOpenPriceChartTickerButtons(type);
+    
+    document.querySelector('#open-price-chart-container .filter-container')
+        .dataset.currentFilter = type;
+}
+
+function updateOpenPriceChartTickerButtons(type) {
+    const buttonsContainer = document.querySelector('#open-price-chart-container #ticker-buttons');
+    buttonsContainer.innerHTML = "";
+    
+    const tickers = type === "stocks" ? 
+        tickerSets.stocks : tickerSets.indices;
+    
+    d3.select(buttonsContainer)
+        .selectAll(".ticker-btn")
+        .data(tickers)
+        .enter()
+        .append("button")
+        .attr("class", "ticker-btn")
+        .style("width", "100px")
+        .html(d => `
+            <span class="ticker-name">${d}</span>
+            <div class="ticker-hover-info">
+                <span class="price-change"></span>
+                <span class="open-price"></span>
+            </div>
+        `)
+        .classed("active", d => d === currentTicker)
+        .on("mouseover", function(event, ticker) {
+            showTickerPriceInfo(this, ticker);
+        })
+        .on("mouseout", function() {
+            d3.select(this).select(".ticker-hover-info")
+                .style("opacity", 0);
+        })
+        .on("click", function(event, ticker) {
+            d3.selectAll("#open-price-chart-container .ticker-btn")
+                .classed("active", false);
+            d3.select(this).classed("active", true);
+            
+            loadData(ticker).then(() => {
+                createOpenPriceChart(ticker);
+            });
+        });
+}
+
+function showTickerPriceInfo(buttonElement, ticker) {
+    const dataset = tickerSets.stocks.includes(ticker) ? allData : allDataIndex;
+    const tickerData = dataset.filter(d => 
+        (d.STOCK_TICK === ticker || d.INDEX_TICK === ticker) && 
+        d.period === 'D'
+    );
+    
+    if (tickerData.length === 0) return;
+    
+    const latestData = tickerData[tickerData.length - 1];
+    const prevClose = tickerData.length > 1 ? 
+        tickerData[tickerData.length - 2].close : latestData.open;
+        console.log(prevClose)
+    console.log(prevClose)
+    const change = latestData.close - prevClose;
+    const changePercent = (change / prevClose * 100).toFixed(2);
+    
+    const hoverInfo = d3.select(buttonElement).select(".ticker-hover-info");
+    
+    hoverInfo.select(".price-change")
+        .text(`${change >= 0 ? '+' : ''}${change.toFixed(2)} (${changePercent}%)`)
+        .classed("positive", change >= 0)
+        .classed("negative", change < 0);
+        
+    hoverInfo.select(".open-price")
+        .text(`Open: ${latestData.open.toFixed(2)}`);
+    
+    hoverInfo.style("opacity", 1);
+}
+
+function updateTickerButtons(type) {
+    const buttonsContainer = document.getElementById("ticker-buttons");
+    buttonsContainer.innerHTML = "";
+    
+    tickerSets[type].forEach(ticker => {
+        const btn = document.createElement("button");
+        btn.className = "ticker-btn";
+        btn.textContent = ticker;
+        btn.addEventListener("click", () => {
+            loadData(ticker).then(() => {
+                createCombinedCharts(filteredData, ticker);
+                createDividend(filter_dividends);
+                createOpenPriceChart(ticker);
+            });
+        });
+        buttonsContainer.appendChild(btn);
+    });
+}
