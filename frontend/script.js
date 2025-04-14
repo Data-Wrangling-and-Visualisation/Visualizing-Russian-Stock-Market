@@ -106,7 +106,7 @@ async function loadIndexData() {
 
 async function fetchData(type) {
     if (type === "dictionary") {
-        fetch('http://localhost:5000/api/data/dictionary')
+        fetch('http://localhost:5500/api/data/dictionary')
         .then(response => response.json())
         .then(data => {
           tickerMap = data;
@@ -114,7 +114,7 @@ async function fetchData(type) {
         })
         .catch(error => console.error("Dictionary download error:", error));
     } else {
-        const response = await fetch(`http://localhost:5000/api/data/${type}`);
+        const response = await fetch(`http://localhost:5500/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
     }
@@ -384,12 +384,12 @@ function createDividend(data) {
     container.selectAll("*").remove(); 
     
     const containerWidth = container.node().getBoundingClientRect().width/4;
-    const width = containerWidth;
-    const height = 300;
+    const width = containerWidth - 15;
+    const height = 180;
     
     const svg = container.append("svg")
-        .attr("width", width)
-        .attr("height", height)
+        .attr("width", width - 100)
+        .attr("height", height - 300)
         .attr("viewBox", `0 0 ${width} ${height}`);
     
     const margin = {top: 30, right: 20, bottom: 50, left: 50};
@@ -460,7 +460,7 @@ function createDividend(data) {
         .attr("x", width / 2)
         .attr("y", 20)
         .attr("text-anchor", "middle")
-        .style("font-size", "14px")
+        .style("font-size", "12px")
         .style("font-weight", "bold")
         .text(`Дивиденды ${data[0].DIV_TICK} по годам (${data[0].currencyid})`);
     

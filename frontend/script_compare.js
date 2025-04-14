@@ -37,7 +37,7 @@ const colors = {
   IMOEX: "#9467bd",
 };
 
-fetch("http://127.0.0.1:5000/api/data/index")
+fetch("http://localhost:5500/api/data/index")
   .then((response) => response.json())
   .then((data) => {
     indexData = data.reduce((acc, d) => {

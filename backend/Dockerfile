@@ -14,6 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 COPY ./data /app/data
 
-EXPOSE 5000
+EXPOSE 5500
 
 CMD ["python", "server.py"]
