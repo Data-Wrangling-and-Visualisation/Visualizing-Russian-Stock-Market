@@ -30,7 +30,7 @@ The repository is organized as follows:
 
 ## Technologies Used
 
-- Programming Languages: Python, JavaScript.
+- Programming Languages: Python, JavaScript, CSS, HTML.
 - Data Analysis Libraries: Pandas.
 - Visualization Libraries: D3js.
 - Web Frameworks: Flask.
@@ -86,6 +86,7 @@ The project is currently under development.
 Future updates will include:
 
 - Interactive visualizations,
-- Fix errors
+- CSS Styling,
+- Fix errors,
 
 ---
