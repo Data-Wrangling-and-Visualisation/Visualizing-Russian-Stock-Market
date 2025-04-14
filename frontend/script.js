@@ -106,7 +106,7 @@ async function loadIndexData() {
 
 async function fetchData(type) {
     if (type === "dictionary") {
-        fetch('http://127.0.0.1:5000/api/data/dictionary')
+        fetch('http://localhost:5000/api/data/dictionary')
         .then(response => response.json())
         .then(data => {
           tickerMap = data;
@@ -114,7 +114,7 @@ async function fetchData(type) {
         })
         .catch(error => console.error("Dictionary download error:", error));
     } else {
-        const response = await fetch(`http://127.0.0.1:5000/api/data/${type}`);
+        const response = await fetch(`http://localhost:5000/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
     }
