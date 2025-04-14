@@ -1,0 +1,128 @@
+{
+    "IMOEX": {
+    "name": "Индекс МосБиржи",
+    "composition": {
+        "SBER": 15.2,
+        "GAZP": 13.8,
+        "LKOH": 11.5,
+        "NVTK": 7.1,
+        "GMKN": 6.9,
+        "PLZL": 4.3,
+        "TATN": 4.2,
+        "ROSN": 4.0,
+        "MGNT": 3.8,
+        "AFKS": 3.5,
+        "Others": 25.7
+    }
+    },
+    "IMOEX2": {
+    "name": "Индекс МосБиржи (без 2-го эшелона)",
+    "composition": {
+        "SBER": 16.5,
+        "GAZP": 15.0,
+        "LKOH": 12.5,
+        "NVTK": 7.7,
+        "GMKN": 7.5,
+        "PLZL": 4.7,
+        "TATN": 4.6,
+        "ROSN": 4.4,
+        "MGNT": 4.1,
+        "AFKS": 3.8,
+        "Others": 19.2
+    }
+    },
+    "RTSI": {
+    "name": "Индекс РТС",
+    "composition": {
+        "SBER": 14.9,
+        "GAZP": 13.5,
+        "LKOH": 11.3,
+        "NVTK": 7.0,
+        "GMKN": 6.8,
+        "PLZL": 4.2,
+        "TATN": 4.1,
+        "ROSN": 3.9,
+        "MGNT": 3.7,
+        "AFKS": 3.4,
+        "Others": 27.2
+    }
+    },
+    "IMOEXCNY": {
+    "name": "MOEX China Index",
+    "composition": {
+        "GAZP": 22.3,
+        "SBER": 18.7,
+        "LKOH": 15.4,
+        "GMKN": 9.8,
+        "PLZL": 6.2,
+        "ALRS": 5.9,
+        "NLMK": 5.6,
+        "CHMF": 5.1,
+        "ROSN": 4.5,
+        "TATN": 3.8,
+        "Others": 2.7
+    }
+    },
+    "MOEXBC": {
+    "name": "Потребительский сектор",
+    "composition": {
+        "MGNT": 34.2,
+        "FIVE": 28.5,
+        "YNDX": 12.1,
+        "DSKY": 8.7,
+        "OZON": 7.4,
+        "LNTA": 5.3,
+        "Others": 3.8
+    }
+    },
+    "MOEXOG": {
+    "name": "Нефтегазовый сектор",
+    "composition": {
+        "GAZP": 38.6,
+        "LKOH": 27.4,
+        "ROSN": 15.2,
+        "NVTK": 9.8,
+        "TATN": 5.3,
+        "SNGS": 3.7
+    }
+    },
+    "MOEXEU": {
+    "name": "Электроэнергетика",
+    "composition": {
+        "IRAO": 31.5,
+        "HYDR": 25.8,
+        "FEES": 18.3,
+        "TGKA": 9.4,
+        "OGKB": 7.2,
+        "Others": 7.8
+    }
+    },
+    "MOEXTL": {
+    "name": "Телекоммуникации",
+    "composition": {
+        "MTSS": 62.4,
+        "RTKM": 34.1,
+        "Others": 3.5
+    }
+    },
+    "MOEXMM": {
+    "name": "Металлы и добыча",
+    "composition": {
+        "GMKN": 32.7,
+        "NLMK": 25.3,
+        "CHMF": 18.9,
+        "PLZL": 15.2,
+        "ALRS": 7.9
+    }
+    },
+    "MOEXFN": {
+    "name": "Финансовый сектор",
+    "composition": {
+        "SBER": 58.3,
+        "VTBR": 23.6,
+        "MOEX": 9.8,
+        "TCSG": 5.4,
+        "Others": 2.9
+    }
+    }
+}
