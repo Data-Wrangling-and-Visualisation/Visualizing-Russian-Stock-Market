@@ -1,8 +1,9 @@
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder='../frontend', template_folder='../frontend')
-CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
+app = Flask(__name__)
+# Разрешаем все CORS для упрощения (в production ограничьте!)
+CORS(app) 
 
 @app.route('/api/data/<data_type>')
 def get_data(data_type):
@@ -25,4 +26,4 @@ def static_files(path):
     return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000)
