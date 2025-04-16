@@ -1,6 +1,9 @@
 body {
-  font-family: Arial, sans-serif;
-  margin: 20px;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f5f7fa;
+  color: black;
 }
 .chart-container {
   display: flex;
@@ -52,22 +55,26 @@ select {
   pointer-events: none;
   font-size: 12px;
 }
-.nav-links {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
 header {
-  background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+  background: #9baf9f;
   padding: 1rem 2rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  min-height: 6vh;
 }
+
+.nav-links {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  max-width: 1200px;
+  margin-top: 0.5%;
+  margin-left: 4%;
+}
+
 .nav-links a {
   color: white;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 700;
   padding: 8px 12px;
   border-radius: 4px;
   transition: background-color 0.3s;
