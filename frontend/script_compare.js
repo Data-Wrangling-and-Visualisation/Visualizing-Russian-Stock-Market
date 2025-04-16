@@ -29,95 +29,217 @@ const xAxis = g
 const yAxis = g.append("g").attr("class", "axis axis--y");
 
 let indexData = {};
-const colors = {
-  SP500: "#1f77b4",
-  NASDAQ: "#ff7f0e",
-  DJI: "#2ca02c",
-  RTSI: "#d62728",
-  IMOEX: "#9467bd",
-};
+let stockData = {};
 
-fetch("http://localhost:5500/api/data/index")
-  .then((response) => response.json())
-  .then((data) => {
-    indexData = data.reduce((acc, d) => {
-      const index = d.INDEX_TICK;
-      if (!acc[index]) acc[index] = [];
-      acc[index].push({ date: d.begin.split(" ")[0], value: +d.close });
-      return acc;
-    }, {});
-    populateSelectors(Object.keys(indexData));
-    updateChart();
-  })
-  .catch((err) => console.error("Ошибка загрузки данных индексов:", err));
+let indexNamesMap = {};
+let stockNamesMap = {};
 
-function populateSelectors(indexNames) {
-  const select1 = document.getElementById("index1");
-  const select2 = document.getElementById("index2");
-  select1.innerHTML = "";
-  select2.innerHTML = "";
+Promise.all([
+  fetch("http://localhost:5500/api/data/index").then((response) =>
+    response.json()
+  ),
+  fetch("http://localhost:5500/api/data/stock").then((response) =>
+    response.json()
+  ),
+  fetch("http://localhost:5500/api/data/indexIndustryStructure").then(
+    (response) => response.json()
+  ),
+  fetch("http://localhost:5500/api/data/dictionary").then((response) =>
+    response.json()
+  ),
+])
+  .then(
+    ([
+      indexDataResponse,
+      stockDataResponse,
+      industryStructure,
+      tickerDictionary,
+    ]) => {
+      indexNamesMap = Object.fromEntries(
+        Object.entries(industryStructure).map(([ticker, data]) => [
+          ticker,
+          data.name,
+        ])
+      );
 
-  indexNames.forEach((name) => {
-    select1.add(new Option(name, name));
-    select2.add(new Option(name, name));
+      stockNamesMap = Object.fromEntries(
+        Object.entries(tickerDictionary).map(([name, ticker]) => [ticker, name])
+      );
+
+      indexData = indexDataResponse.reduce((acc, d) => {
+        const index = d.INDEX_TICK;
+        if (!acc[index]) acc[index] = [];
+        acc[index].push({ date: d.begin.split(" ")[0], value: +d.close });
+        return acc;
+      }, {});
+
+      stockData = stockDataResponse.reduce((acc, d) => {
+        const stock = d.STOCK_TICK;
+        if (!acc[stock]) acc[stock] = [];
+        acc[stock].push({ date: d.begin.split(" ")[0], value: +d.close });
+        return acc;
+      }, {});
+
+      populateSelectors(Object.keys(indexData), Object.keys(stockData));
+      updateChart();
+    }
+  )
+  .catch((err) => console.error(err));
+
+function getDisplayName(ticker, isStock = false) {
+  if (isStock) {
+    return stockNamesMap[ticker] || ticker;
+  }
+  return indexNamesMap[ticker] || ticker;
+}
+
+function populateSelectors(indexNames, stockNames) {
+  const index1 = document.getElementById("index1");
+  const index2 = document.getElementById("index2");
+  const stock1 = document.getElementById("stock1");
+  const stock2 = document.getElementById("stock2");
+  const mixed1 = document.getElementById("mixed1");
+  const mixed2 = document.getElementById("mixed2");
+
+  [index1, index2, mixed1].forEach((select) => {
+    select.innerHTML = "";
+    indexNames.forEach((name) => {
+      const option = new Option(getDisplayName(name), name);
+      select.add(option);
+    });
   });
-  if (indexNames.length >= 2) select2.selectedIndex = 1;
+
+  [stock1, stock2, mixed2].forEach((select) => {
+    select.innerHTML = "";
+    stockNames.forEach((name) => {
+      const option = new Option(getDisplayName(name, true), name);
+      select.add(option);
+    });
+  });
+
+  if (indexNames.length >= 1) {
+    index1.selectedIndex = 0;
+    mixed1.selectedIndex = 0;
+  }
+  if (indexNames.length >= 2) {
+    index2.selectedIndex = 1;
+  }
+  if (stockNames.length >= 1) {
+    stock1.selectedIndex = 0;
+    mixed2.selectedIndex = 0;
+  }
+  if (stockNames.length >= 2) {
+    stock2.selectedIndex = 1;
+  }
 }
 
 function updateChart() {
-  const index1 = document.getElementById("index1").value;
-  const index2 = document.getElementById("index2").value;
+  const comparisonMode = document.querySelector(
+    ".comparison-mode button.active"
+  ).id;
 
-  if (!indexData[index1] || !indexData[index2]) return;
-  if (index1 === index2) {
-    alert("Выберите разные индексы!");
+  let data1, data2, label1, label2;
+
+  if (comparisonMode === "compareIndices") {
+    const index1 = document.getElementById("index1").value;
+    const index2 = document.getElementById("index2").value;
+    data1 = indexData[index1];
+    data2 = indexData[index2];
+    label1 = index1;
+    label2 = index2;
+  } else if (comparisonMode === "compareStocks") {
+    const stock1 = document.getElementById("stock1").value;
+    const stock2 = document.getElementById("stock2").value;
+    data1 = stockData[stock1];
+    data2 = stockData[stock2];
+    label1 = stock1;
+    label2 = stock2;
+  } else {
+    const firstType = document.querySelector("label[for='mixed1']").dataset
+      .type;
+    const secondType = document.querySelector("label[for='mixed2']").dataset
+      .type;
+
+    const mixed1 = document.getElementById("mixed1").value;
+    const mixed2 = document.getElementById("mixed2").value;
+
+    data1 = firstType === "index" ? indexData[mixed1] : stockData[mixed1];
+    data2 = secondType === "index" ? indexData[mixed2] : stockData[mixed2];
+    label1 = mixed1;
+    label2 = mixed2;
+  }
+
+  if (!data1 || !data2) {
+    console.error("Не удалось загрузить данные для сравнения");
     return;
   }
+
+  if (label1 === label2) {
+    console.error("Выбраны одинаковые данные для сравнения");
+    return;
+  }
+
   const unique = (arr) =>
     Array.from(
       new Map(arr.map((item) => [item.date.toISOString(), item])).values()
     );
 
-  const data1 = unique(
-    indexData[index1].map((d) => ({
+  const processedData1 = unique(
+    data1.map((d) => ({
       date: new Date(d.date),
       value: d.value,
     }))
-  );
+  ).sort((a, b) => a.date - b.date);
 
-  const data2 = unique(
-    indexData[index2].map((d) => ({
+  const processedData2 = unique(
+    data2.map((d) => ({
       date: new Date(d.date),
       value: d.value,
     }))
-  );
+  ).sort((a, b) => a.date - b.date);
 
-  const base1 = data1[0].value;
-  const base2 = data2[0].value;
+  const base1 = processedData1[0]?.value;
+  const base2 = processedData2[0]?.value;
 
-  const normalized1 = data1.map((d) => ({
+  if (!base1 || !base2) {
+    console.error("Недостаточно данных для построения графика");
+    return;
+  }
+
+  const normalized1 = processedData1.map((d) => ({
     date: d.date,
     value: (d.value / base1 - 1) * 100,
+    label: label1,
+    originalValue: d.value,
   }));
-  const normalized2 = data2.map((d) => ({
+
+  const normalized2 = processedData2.map((d) => ({
     date: d.date,
     value: (d.value / base2 - 1) * 100,
+    label: label2,
+    originalValue: d.value,
   }));
-  normalized1.sort((a, b) => a.date - b.date);
-  normalized2.sort((a, b) => a.date - b.date);
 
   const combinedData = [...normalized1, ...normalized2];
 
   x.domain(d3.extent(combinedData, (d) => d.date));
   y.domain([
-    d3.min(combinedData, (d) => d.value) * 1.05,
-    d3.max(combinedData, (d) => d.value) * 1.05,
+    Math.min(
+      d3.min(normalized1, (d) => d.value),
+      d3.min(normalized2, (d) => d.value)
+    ) * 1.05,
+    Math.max(
+      d3.max(normalized1, (d) => d.value),
+      d3.max(normalized2, (d) => d.value)
+    ) * 1.05,
   ]);
 
   xAxis.call(d3.axisBottom(x));
   yAxis.call(d3.axisLeft(y).tickFormat((d) => d.toFixed(1) + "%"));
 
   svg.selectAll(".line").remove();
+  svg.selectAll(".legend").remove();
+  svg.selectAll(".dot").remove();
 
   const line = d3
     .line()
@@ -129,7 +251,7 @@ function updateChart() {
     .append("path")
     .datum(normalized1)
     .attr("class", "line line1")
-    .attr("stroke", "steelblue")
+    .attr("stroke", "#5a9f53")
     .attr("stroke-opacity", 0.8)
     .attr("fill", "none")
     .attr("stroke-width", 2)
@@ -145,26 +267,190 @@ function updateChart() {
     .attr("stroke-width", 2)
     .attr("d", line);
 
+  const legend = svg
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${innerWidth - 150}, 20)`);
+
+  function shortenName(name, maxLength = 15) {
+    return name.length > maxLength
+      ? name.substring(0, maxLength) + "..."
+      : name;
+  }
+
+  legend
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("fill", "#5a9f53");
+
+  const isFirstStock =
+    comparisonMode === "compareStocks" ||
+    (comparisonMode === "compareMixed" &&
+      document.querySelector("label[for='mixed1']").dataset.type === "stock");
+
+  legend
+    .append("text")
+    .attr("x", 15)
+    .attr("y", 10)
+    .text(shortenName(getDisplayName(label1, isFirstStock)));
+
+  legend
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", 20)
+    .attr("width", 10)
+    .attr("height", 10)
+    .attr("fill", "tomato");
+
+  const isSecondStock =
+    comparisonMode === "compareStocks" ||
+    (comparisonMode === "compareMixed" &&
+      document.querySelector("label[for='mixed2']").dataset.type === "stock");
+
+  legend
+    .append("text")
+    .attr("x", 15)
+    .attr("y", 30)
+    .text(shortenName(getDisplayName(label2, isFirstStock)));
+
+  const dots1 = svg
+    .append("g")
+    .attr("class", "dots1")
+    .selectAll(".dot")
+    .data(normalized1)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("cx", (d) => x(d.date))
+    .attr("cy", (d) => y(d.value))
+    .attr("r", 5)
+    .style("opacity", 0)
+    .style("pointer-events", "all");
+
+  const dots2 = svg
+    .append("g")
+    .attr("class", "dots2")
+    .selectAll(".dot")
+    .data(normalized2)
+    .enter()
+    .append("circle")
+    .attr("class", "dot")
+    .attr("cx", (d) => x(d.date))
+    .attr("cy", (d) => y(d.value))
+    .attr("r", 5)
+    .style("opacity", 0)
+    .style("pointer-events", "all");
+
+  const showTooltip = (event, d) => {
+    const isStockTooltip = d.label === label2 ? isSecondStock : isFirstStock;
+
+    tooltip
+      .html(
+        `
+    <div><strong>${getDisplayName(d.label, isStockTooltip)}</strong></div>
+    <div>Дата: ${d.date.toLocaleDateString()}</div>
+    <div>Изменение: ${d.value.toFixed(2)}%</div>
+    <div>Цена: ${d.originalValue.toFixed(2)}</div>
+  `
+      )
+      .style("left", event.pageX + 15 + "px")
+      .style("top", event.pageY - 30 + "px")
+      .style("opacity", 1);
+  };
+
+  const handleMouseOver = function (event, d) {
+    showTooltip(event, d);
+    if (d.label === label1) {
+      path1.attr("stroke-opacity", 1);
+      path2.attr("stroke-opacity", 0.1);
+    } else {
+      path2.attr("stroke-opacity", 1);
+      path1.attr("stroke-opacity", 0.1);
+    }
+  };
+
+  const handleMouseOut = function () {
+    tooltip.style("opacity", 0);
+    path1.attr("stroke-opacity", 0.8);
+    path2.attr("stroke-opacity", 0.8);
+  };
+
+  dots1.on("mouseover", handleMouseOver).on("mouseout", handleMouseOut);
+  dots2.on("mouseover", handleMouseOver).on("mouseout", handleMouseOut);
+
   path1
-    .on("mouseover", () => {
+    .on("mouseover", function () {
       path1.attr("stroke-opacity", 1);
       path2.attr("stroke-opacity", 0.1);
     })
-    .on("mouseout", () => {
+    .on("mouseout", function () {
       path1.attr("stroke-opacity", 0.8);
       path2.attr("stroke-opacity", 0.8);
     });
 
   path2
-    .on("mouseover", () => {
+    .on("mouseover", function () {
       path2.attr("stroke-opacity", 1);
       path1.attr("stroke-opacity", 0.1);
     })
-    .on("mouseout", () => {
+    .on("mouseout", function () {
       path1.attr("stroke-opacity", 0.8);
       path2.attr("stroke-opacity", 0.8);
     });
 }
 
+document.getElementById("compareIndices").classList.add("active");
+document.getElementById("indicesComparison").style.display = "block";
+document.getElementById("stocksComparison").style.display = "none";
+document.getElementById("mixedComparison").style.display = "none";
+
+document
+  .getElementById("compareIndices")
+  .addEventListener("click", function () {
+    document
+      .querySelectorAll(".comparison-mode button")
+      .forEach((btn) => btn.classList.remove("active"));
+    this.classList.add("active");
+    document.getElementById("indicesComparison").style.display = "block";
+    document.getElementById("stocksComparison").style.display = "none";
+    document.getElementById("mixedComparison").style.display = "none";
+    updateChart();
+  });
+
+document.getElementById("compareStocks").addEventListener("click", function () {
+  document
+    .querySelectorAll(".comparison-mode button")
+    .forEach((btn) => btn.classList.remove("active"));
+  this.classList.add("active");
+  document.getElementById("indicesComparison").style.display = "none";
+  document.getElementById("stocksComparison").style.display = "block";
+  document.getElementById("mixedComparison").style.display = "none";
+  updateChart();
+});
+
+document.getElementById("compareMixed").addEventListener("click", function () {
+  document
+    .querySelectorAll(".comparison-mode button")
+    .forEach((btn) => btn.classList.remove("active"));
+  this.classList.add("active");
+  document.getElementById("indicesComparison").style.display = "none";
+  document.getElementById("stocksComparison").style.display = "none";
+  document.getElementById("mixedComparison").style.display = "block";
+  updateChart();
+});
+
+document
+  .querySelectorAll("input[name='first'], input[name='second']")
+  .forEach((input) => {
+    input.addEventListener("change", updateChart);
+  });
+
+document.getElementById("mixed1").addEventListener("change", updateChart);
+document.getElementById("mixed2").addEventListener("change", updateChart);
 document.getElementById("index1").addEventListener("change", updateChart);
 document.getElementById("index2").addEventListener("change", updateChart);
+document.getElementById("stock1").addEventListener("change", updateChart);
+document.getElementById("stock2").addEventListener("change", updateChart);
