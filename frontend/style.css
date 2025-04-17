@@ -3,21 +3,23 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f5f7fa;
-    color: #333;
+    color: black;
 }
 
 header {
-    background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+    background: #9baf9f;
     padding: 1rem 2rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    min-height: 6vh;
 }
 
 .nav-links {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: center;
     max-width: 1200px;
-    margin: 0 auto;
+    margin-top: 0.5%;
+    margin-left: 6%;
 }
 
 .search-container {
@@ -28,24 +30,24 @@ header {
 #tickerInput {
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 14px;
-    width: 200px;
+    width: 500px;
 }
 
 #searchBtn {
-    background-color: #ff7b25;
+    background-color: #436239;
     color: white;
     border: none;
     padding: 8px 16px;
-    border-radius: 4px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.3s;
 }
 
 #searchBtn:hover {
-    background-color: #ff6200;
+    background-color: #214517;
 }
 
 .nav-links a {
@@ -53,7 +55,7 @@ header {
     text-decoration: none;
     font-weight: 500;
     padding: 8px 12px;
-    border-radius: 4px;
+    border-radius: 10px;
     transition: background-color 0.3s;
 }
 
@@ -70,34 +72,28 @@ header {
 .period-selector {
     display: flex;
     gap: 10px;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 
 .period-btn {
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
+    background-color: #ecf2ed;
+    border: 1px solid #d2dcd4;
     padding: 6px 12px;
-    border-radius: 4px;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.3s;
+    font-weight: 700;
+    color: #5f6368;
 }
 
 .period-btn:hover {
-    background-color: #e0e0e0;
+    background-color: #c4d5c7;
 }
 
 .period-btn.active {
-    background-color: #0077b6;
+    background-color: #436239;
     color: white;
-    border-color: #0077b6;
-}
-
-svg {
-    display: block;
-    margin-left: 0 auto;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-color: #436239;
 }
 
 .candle rect {
@@ -105,22 +101,22 @@ svg {
 }
 
 .bullish {
-    fill: #4CAF50;
+    fill: #436239;
 }
 
 .bearish {
-    fill: #F44336;
+    fill: #c62f2d;
 }
 
 .volume-bar {
-    fill: #4285f4;
+    fill: #9baf9f;
     opacity: 0.7;
 }
 
 .brush .selection {
-    fill: #ff7b25;
+    fill: #e5ac9d;
     opacity: 0.3;
-    stroke: #ff6200;
+    stroke: #e5ac9d;
     stroke-width: 1px;
 }
 
@@ -136,11 +132,6 @@ svg {
     shape-rendering: crispEdges;
 }
 
-text.title {
-    font-size: 18px;
-    font-weight: bold;
-    fill: #0077b6;
-}
 #chart-container {
     max-width: 95%;
     margin: 2rem auto;
@@ -158,15 +149,13 @@ svg {
     height: auto;
     display: block;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-left: -10px;
 }
 
 .volume-title {
     font-size: 14px !important;
     text-anchor: middle;
-    fill: #0077b6;
+    font-weight: 700;
+    fill: black;
 }
 
 .index-structure-container {
@@ -219,8 +208,8 @@ svg {
 
 .index-selector select:focus {
     outline: none;
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    border-color: #e5ac9d;
+    box-shadow: 0 0 0 2px #ddbab1;
 }
 
 .index-selector select:active {
@@ -264,16 +253,24 @@ svg {
 }
 
 .tooltip {
-    position: absolute;
-    padding: 10px 15px;
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     pointer-events: none;
-    font-size: 14px;
-    line-height: 1.4;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-    z-index: 100;
+    transition: opacity 0.3s;
+}
+
+.tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #214517;
+}
+
+.bar {
+    transition: all 0.2s ease;
 }
 
 .legend {
@@ -358,20 +355,13 @@ svg {
     padding: 8px;
     background: #f8f8f8;
     border-bottom: 1px solid #eee;
-}
-
-.filter-container {
-    padding: 12px 16px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    align-items: center;
+    border-radius: 8px
 }
 
 .filter-btn {
     padding: 8px 16px;
     border: 1px solid #dfe1e5;
-    background: white;
+    background-color: #ecf2ed;
     border-radius: 20px;
     cursor: pointer;
     font-size: 14px;
@@ -379,18 +369,20 @@ svg {
     color: #5f6368;
     transition: all 0.2s ease;
     margin: 0 4px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
 }
 
 .filter-btn:hover {
-    background: #f1f3f4;
-    border-color: #dadce0;
+    background-color: #c4d5c7;
 }
 
 .filter-btn.active {
-    background: #4285f4;
+    background-color: #436239;
     color: white;
-    border-color: #4285f4;
-    box-shadow: 0 1px 2px rgba(66,133,244,0.3);
+    border-color: #436239;
 }
 
 .ticker-buttons {
@@ -403,25 +395,23 @@ svg {
 .ticker-buttons .ticker-btn {
     padding: 6px 12px;
     border: 1px solid #dfe1e5;
-    background: white;
+    background-color: #ecf2ed;
     border-radius: 16px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    color: #3c4043;
     transition: all 0.2s ease;
     position: relative;
 }
 
 .ticker-buttons .ticker-btn:hover {
-    background: #f1f3f4;
-    border-color: #dadce0;
+    background-color: #c4d5c7;
 }
 
-.ticker-buttons .ticker-btn.active {
-    background: #e8f0fe;
-    color: #1967d2;
-    border-color: #d2e3fc;
+.ticker-btn.active {
+    color: white;
+    background: #c4d5c7;
+    border-color: #9baf9f;
 }
 
 .filter-container span {
@@ -472,12 +462,12 @@ svg {
 
 .chart-select:focus {
     outline: none;
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    border-color: #9baf9f;
+    box-shadow: 0 0 0 2px rgba(141, 164, 131, 0.2);
 }
 
 .chart-select:active {
-    border-color: #4285f4;
+    border-color: #9baf9f;
 }
 
 .chart-select option {
@@ -513,11 +503,11 @@ svg {
 }
 
 .price-change.positive {
-    color: #4CAF50;
+    color: #779d6a;
 }
 
 .price-change.negative {
-    color: #F44336;
+    color: #c62f2d;
 }
 
 .open-price {
