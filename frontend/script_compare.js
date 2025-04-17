@@ -133,12 +133,22 @@ function populateSelectors(indexNames, stockNames) {
   }
 }
 
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 5000);
+}
+
 function updateChart() {
   const comparisonMode = document.querySelector(
     ".comparison-mode button.active"
   ).id;
 
-  let data1, data2, label1, label2;
+  let data1, data2, label1, label2, firstType, secondType;
 
   if (comparisonMode === "compareIndices") {
     const index1 = document.getElementById("index1").value;
@@ -147,6 +157,8 @@ function updateChart() {
     data2 = indexData[index2];
     label1 = index1;
     label2 = index2;
+    firstType = "index";
+    secondType = "index";
   } else if (comparisonMode === "compareStocks") {
     const stock1 = document.getElementById("stock1").value;
     const stock2 = document.getElementById("stock2").value;
@@ -154,11 +166,11 @@ function updateChart() {
     data2 = stockData[stock2];
     label1 = stock1;
     label2 = stock2;
+    firstType = "stock";
+    secondType = "stock";
   } else {
-    const firstType = document.querySelector("label[for='mixed1']").dataset
-      .type;
-    const secondType = document.querySelector("label[for='mixed2']").dataset
-      .type;
+    firstType = document.querySelector("label[for='mixed1']").dataset.type;
+    secondType = document.querySelector("label[for='mixed2']").dataset.type;
 
     const mixed1 = document.getElementById("mixed1").value;
     const mixed2 = document.getElementById("mixed2").value;
@@ -170,12 +182,12 @@ function updateChart() {
   }
 
   if (!data1 || !data2) {
-    console.error("Не удалось загрузить данные для сравнения");
+    alert("Не удалось загрузить данные для сравнения");
     return;
   }
 
-  if (label1 === label2) {
-    console.error("Выбраны одинаковые данные для сравнения");
+  if (label1 === label2 && firstType === secondType) {
+    showToast("Выберите разные данные для сравнения");
     return;
   }
 
@@ -202,7 +214,7 @@ function updateChart() {
   const base2 = processedData2[0]?.value;
 
   if (!base1 || !base2) {
-    console.error("Недостаточно данных для построения графика");
+    alert("Недостаточно данных для построения графика");
     return;
   }
 
@@ -314,7 +326,7 @@ function updateChart() {
     .append("text")
     .attr("x", 15)
     .attr("y", 30)
-    .text(shortenName(getDisplayName(label2, isFirstStock)));
+    .text(shortenName(getDisplayName(label2, isSecondStock)));
 
   const dots1 = svg
     .append("g")

@@ -160,3 +160,23 @@ select {
   overflow: hidden;
   display: inline-block;
 }
+
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ff4444;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  font-weight: bold;
+}
+
+.toast-notification.show {
+  opacity: 1;
+}
