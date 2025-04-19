@@ -3,21 +3,23 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f5f7fa;
-    color: #333;
+    color: black;
 }
 
 header {
-    background: linear-gradient(135deg, #0077b6 0%, #00b4d8 100%);
+    background: #9baf9f;
     padding: 1rem 2rem;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    min-height: 6vh;
 }
 
 .nav-links {
     display: flex;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: center;
     max-width: 1200px;
-    margin: 0 auto;
+    margin-top: 0.5%;
+    margin-left: 6%;
 }
 
 .search-container {
@@ -28,24 +30,34 @@ header {
 #tickerInput {
     padding: 8px 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 14px;
-    width: 200px;
+    width: 500px;
+    transition: all 0.1s ease-out;
+}
+
+#tickerInput:focus {
+    outline: none;
+    border: 1px solid #72856d;
+}
+
+#tickerInput:active {
+    border: 1px solid #72856d;
 }
 
 #searchBtn {
-    background-color: #ff7b25;
+    background-color: #436239;
     color: white;
     border: none;
     padding: 8px 16px;
-    border-radius: 4px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: bold;
     transition: background-color 0.3s;
 }
 
 #searchBtn:hover {
-    background-color: #ff6200;
+    background-color: #214517;
 }
 
 .nav-links a {
@@ -53,7 +65,7 @@ header {
     text-decoration: none;
     font-weight: 500;
     padding: 8px 12px;
-    border-radius: 4px;
+    border-radius: 10px;
     transition: background-color 0.3s;
 }
 
@@ -61,43 +73,37 @@ header {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-#chart-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
 .period-selector {
     display: flex;
-    gap: 10px;
-    margin-bottom: 1rem;
+    margin-top: 1rem;
 }
 
 .period-btn {
-    background-color: #f0f0f0;
-    border: 1px solid #ddd;
-    padding: 6px 12px;
+    background-color: #ecf2ed;
+    border: none;
+    padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+    font-weight: 700;
+    color: #436239;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    border-radius: 20px;
+    margin-left: 1%;
 }
-
+  
 .period-btn:hover {
-    background-color: #e0e0e0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.16);
+    transform: translateY(-1px);
+    background-color: #c4d5c7;
 }
-
+  
 .period-btn.active {
-    background-color: #0077b6;
+    background-color: #436239;
     color: white;
-    border-color: #0077b6;
-}
-
-svg {
-    display: block;
-    margin-left: 0 auto;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,0.2),
+                0 4px 5px 0 rgba(0,0,0,0.14),
+                0 1px 10px 0 rgba(0,0,0,0.12);
 }
 
 .candle rect {
@@ -105,22 +111,22 @@ svg {
 }
 
 .bullish {
-    fill: #4CAF50;
+    fill: #436239;
 }
 
 .bearish {
-    fill: #F44336;
+    fill: #c62f2d;
 }
 
 .volume-bar {
-    fill: #4285f4;
+    fill: #9baf9f;
     opacity: 0.7;
 }
 
 .brush .selection {
-    fill: #ff7b25;
+    fill: #e5ac9d;
     opacity: 0.3;
-    stroke: #ff6200;
+    stroke: #e5ac9d;
     stroke-width: 1px;
 }
 
@@ -136,45 +142,22 @@ svg {
     shape-rendering: crispEdges;
 }
 
-text.title {
-    font-size: 18px;
-    font-weight: bold;
-    fill: #0077b6;
-}
-#chart-container {
-    max-width: 95%;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    overflow: hidden;
-}
-
-#main-chart, #volume-chart {
-    width: 100%;
-    overflow: visible;
-}
-
 svg {
     width: 100%;
     height: auto;
     display: block;
     background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-left: -10px;
 }
 
 .volume-title {
     font-size: 14px !important;
     text-anchor: middle;
-    fill: #0077b6;
+    font-weight: 700;
+    fill: black;
 }
 
 .index-structure-container {
-    margin-top: 30px;
-    border-top: 1px solid #e0e0e0;
     padding-top: 20px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
     padding: 20px;
 }
 
@@ -219,8 +202,8 @@ svg {
 
 .index-selector select:focus {
     outline: none;
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    border-color: #e5ac9d;
+    box-shadow: 0 0 0 2px #ddbab1;
 }
 
 .index-selector select:active {
@@ -236,23 +219,24 @@ svg {
 .structure-charts {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;
-    justify-content: center;
-    margin-top: 20px;
-}
+    gap: 20px;
+    padding: 20px;
+    position: relative;
+  }
 
 .structure-chart {
     flex: 1 1 45%;
-    min-width: 300px;
-    max-width: 600px;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     background-color: white;
     padding-left: 20px;
     padding-top: 7px;
     padding-bottom: 7px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#bar-chart {
+    width: 100%
 }
 
 .chart-title {
@@ -264,16 +248,24 @@ svg {
 }
 
 .tooltip {
-    position: absolute;
-    padding: 10px 15px;
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     pointer-events: none;
-    font-size: 14px;
-    line-height: 1.4;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-    z-index: 100;
+    transition: opacity 0.3s;
+}
+
+.tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #214517;
+}
+
+.bar {
+    transition: all 0.2s ease;
 }
 
 .legend {
@@ -326,116 +318,107 @@ svg {
 }
 
 #open-price-chart-container {
-    width: 87.5%;
-    height: 600px;
-    margin-top: 20px;
-    margin-left: 80px;
+    height: 680px;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
     padding: 10px;
     background: white;
 }
 
 .tooltip-text {
     font-size: 12px;
-    font-weight: bold;
-    fill: #333;
+    font-family: Arial, sans-serif;
+    pointer-events: none;
 }
 
 .tooltip-text tspan:first-child {
-    font-weight: normal;
-    font-size: 11px;
     fill: #666;
+    font-size: 11px;
 }
 
 .tooltip-text tspan:last-child {
+    fill: #214517;
     font-weight: bold;
-    font-size: 13px;
 }
 
 #open-price-chart-container .filter-container {
-    width: 98.5%;
-    padding: 8px;
+    width: 85%;
+    padding-top: 1%;
+    padding-left: 5%;
+    padding-right: 5%;
+    padding-bottom: 2%;
     background: #f8f8f8;
     border-bottom: 1px solid #eee;
-}
-
-.filter-container {
-    padding: 12px 16px;
-    background: #f8f9fa;
     border-radius: 8px;
-    margin-bottom: 16px;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
+/* Button container adjustments */
 .filter-btn {
-    padding: 8px 16px;
-    border: 1px solid #dfe1e5;
-    background: white;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 3px;
+    border: 1px solid #dedede;
+    background-color: #dedede;
+    border-radius: 8px;
+    min-width: 580px;
+    font-size: 16px;
     color: #5f6368;
     transition: all 0.2s ease;
-    margin: 0 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
 }
 
 .filter-btn:hover {
-    background: #f1f3f4;
-    border-color: #dadce0;
+    background-color: #c4d5c7;
 }
 
 .filter-btn.active {
-    background: #4285f4;
+    background-color: #436239;
     color: white;
-    border-color: #4285f4;
-    box-shadow: 0 1px 2px rgba(66,133,244,0.3);
+    border-color: #436239;
 }
 
 .ticker-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-left: 12px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
+    gap: 6px; /* Reduced gap between buttons */
+    width: 100%;
+    margin-left: 2.5%;
 }
 
 .ticker-buttons .ticker-btn {
-    padding: 6px 12px;
     border: 1px solid #dfe1e5;
-    background: white;
+    background-color: #ecf2ed;
     border-radius: 16px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
-    color: #3c4043;
-    transition: all 0.2s ease;
     position: relative;
+    transition: all 0.2s ease;
 }
 
 .ticker-buttons .ticker-btn:hover {
-    background: #f1f3f4;
-    border-color: #dadce0;
+    background-color: #c4d5c7;
 }
 
-.ticker-buttons .ticker-btn.active {
-    background: #e8f0fe;
-    color: #1967d2;
-    border-color: #d2e3fc;
+.ticker-btn.active {
+    color: white;
+    background: #c4d5c7;
+    border-color: #9baf9f;
 }
 
 .filter-container span {
     font-size: 14px;
     color: #5f6368;
-    margin-right: 8px;
     font-weight: 500;
 }
 
 .price-type-control,
 .period-control {
+    margin-top: -50px;
     margin-right: 30px;
     margin-left: 30px;
-    margin-bottom: 30px;
 }
 
 .price-type-control span,
@@ -472,12 +455,12 @@ svg {
 
 .chart-select:focus {
     outline: none;
-    border-color: #4285f4;
-    box-shadow: 0 0 0 2px rgba(66,133,244,0.2);
+    border-color: #9baf9f;
+    box-shadow: 0 0 0 2px rgba(141, 164, 131, 0.2);
 }
 
 .chart-select:active {
-    border-color: #4285f4;
+    border-color: #9baf9f;
 }
 
 .chart-select option {
@@ -488,19 +471,16 @@ svg {
 
 .ticker-hover-info {
     position: absolute;
-    left: 100%;
-    top: 0;
-    margin-left: 10px;
-    padding: 8px;
+    padding: 6px;
     background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    min-width: 120px;
+    min-width: 100px;
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
 }
 
 .ticker-name {
@@ -510,18 +490,146 @@ svg {
 .price-change {
     display: block;
     font-size: 12px;
+    width: 150px;
 }
 
 .price-change.positive {
-    color: #4CAF50;
+    color: #779d6a;
 }
 
 .price-change.negative {
-    color: #F44336;
+    color: #c62f2d;
 }
 
 .open-price {
     display: block;
     font-size: 12px;
     color: #666;
+}
+
+.dividends_info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Changed from space-evenly for better edge control */
+    max-width: 1400px; /* Optional: constrain maximum width */
+    margin: 0 auto; /* Center the container */
+    padding: 34px; /* Space from screen edges */
+  }
+  
+.left-column {
+    flex: 1; /* Takes up available space */
+    display: flex;
+    flex-direction: column;
+    gap: 4%;
+  }
+
+
+.info {
+    flex: 1 1 45%;
+    max-width: 590px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: white;
+    padding-left: 20px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+}
+
+.additional_content {
+    min-width: 600px;
+}
+
+.company-info-box {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.company-info-box h3 {
+    margin: 0 0 10px 0;
+    color: #436239;
+}
+
+.info-row {
+    margin: 8px 0;
+    font-size: 18px;
+}
+
+.label {
+    font-weight: bold;
+    color: #333;
+    margin-right: 5px;
+}
+
+.info-description {
+    margin-top: 15px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: black;
+}
+
+.no-data {
+    color: #c62f2d;
+    font-style: italic;
+}
+  
+.main-chart-style {
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+  }
+  
+.small-chart-style {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-width: 700px;
+  }
+  
+#volume-chart {
+    border-bottom: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+  }
+
+#main-chart, #volume-chart {
+    overflow: visible;
+    width: 100%;
+}
+
+#chart-container {
+    min-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.left-column2 {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+
+.toast-notification {
+    position: fixed;
+    top: 8%;
+    left: 26.5%;
+    transform: translateX(-50%);
+    background-color: #c62f2d;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    font-weight: bold;
+  }
+  
+.toast-notification.show {
+    opacity: 1;
 }

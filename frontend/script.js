@@ -29,14 +29,14 @@ let moexData = {
     composition: {},
     sectors: {}
 };
+const INDEX_TICKERS = ['IMOEX', 'IMOEX2', 'RTSI', 'IMOEXCNY', 'MOEXBC', 'MOEXOG', 'MOEXEU', 'MOEXTL', 'MOEXMM', 'MOEXFN'];
 let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 let structureTooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 const tickerSets = {
-    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR"],
-    indices: ["IMOEX", "IMOEX2", "RTSI", "IMOEXCNY", "MOEXBC", "MOEXOG",
-        "MOEXEU", "MOEXTL", "MOEXMM", "MOEXFN"]
+    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR", "IRAO", "TATN"],
+    indices: INDEX_TICKERS
 }
 
 async function initApp() {
@@ -70,6 +70,7 @@ async function loadData(ticker) {
         filter_dividends = [...dividends];
         currentTicker = ticker;
         fetchData('dictionary');
+        fetchData('tickerDescr')
 }
 
 async function loadIndexData() {
@@ -121,10 +122,9 @@ function setupUI() {
     const headerSearch = document.getElementById('headerSearch');
     const searchInput = document.createElement("input");
     searchInput.type = "text";
-    searchInput.placeholder = "Тикер (SBER, GAZP...) или название";
+    searchInput.placeholder = "Название тикера (SBER, GAZP...) или компании";
     searchInput.id = "tickerInput";
     searchInput.autocomplete = "off";
-
 
     const tickerDatalist = document.createElement("datalist");
     tickerDatalist.id = "tickerSuggestions";
@@ -149,9 +149,9 @@ function setupUI() {
     const periodSelector = document.createElement("div");
     periodSelector.className = "period-selector";
     periodSelector.innerHTML = `
-        <button class="period-btn active" data-period="month">Месяц</button>
+        <button class="period-btn" data-period="month">Месяц</button>
         <button class="period-btn" data-period="year">Год</button>
-        <button class="period-btn" data-period="all">Все данные</button>
+        <button class="period-btn active" data-period="all">Все данные</button>
     `;
     document.getElementById('chart-container').appendChild(periodSelector);
 }
@@ -290,7 +290,7 @@ function adjustXTicks(scale, width) {
 function createCombinedCharts(data, ticker) {
     const containerWidth = document.getElementById('chart-container').clientWidth;
     const width = containerWidth - 20;
-    const mainHeight = config.mainChart.height;
+    const mainHeight = config.mainChart.height + 50;
     const volumeHeight = config.volumeChart.height;
 
     d3.select("#main-chart").html("");
@@ -334,14 +334,14 @@ function createCandlestickChart(svg, data, width, height, ticker) {
                 .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
                 .attr("width", candleWidth)
                 .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
-                .attr("fill", d.type === 'bullish' ? '#4CAF50' : '#F44336');
+                .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
             
             g.append("line")
                 .attr("x1", 0)
                 .attr("x2", 0)
                 .attr("y1", yMainScale(d.high))
                 .attr("y2", yMainScale(d.low))
-                .attr("stroke", d.type === 'bullish' ? '#4CAF50' : '#F44336')
+                .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
                 .attr("stroke-width", 1);
         });
 
@@ -357,9 +357,10 @@ function createCandlestickChart(svg, data, width, height, ticker) {
 
     svg.append("text")
         .attr("x", width / 2)
-        .attr("y", config.mainChart.margin.top / 2)
+        .attr("y", config.mainChart.margin.top / 2 + 12)
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
+        .style("font-weight", "700")
         .text(`${ticker} - Свечной график`);
 }
 
@@ -388,125 +389,210 @@ function createVolumeChart(svg, data, width, height) {
     svg.append("g")
         .attr("class", "y-axis")
         .attr("transform", `translate(${config.volumeChart.margin.left},0)`)
-        .call(d3.axisLeft(yVolumeScale));
+        .call(d3.axisLeft(yVolumeScale)
+        .ticks(7));
 
     svg.append("text")
         .attr("x", width / 2)
-        .attr("y", config.volumeChart.margin.top)
+        .attr("y", config.volumeChart.margin.top - 10)
         .attr("class", "volume-title")
         .style("font-size", "14px")
         .text("Объем торгов");
 }
 
-function createDividend(data) {
-    if (data.length > 0){
-    const container = d3.select("#additional_content");
-    container.selectAll("*").remove(); 
+function addInfo(type, tickerName) {
+    // Select the appropriate container based on type
+    const typeName = type === "stocks" ? "Акция" : "Индекс";
+    const containerId = type === "stocks" ? "#company_info_stocks" : "#company_info_other";
+    const container = d3.select(containerId);
+    container.selectAll("*").remove(); // Clear previous content
     
-    const containerWidth = container.node().getBoundingClientRect().width/4;
-    const width = containerWidth - 15;
-    const height = 180;
-    
-    const svg = container.append("svg")
-        .attr("width", width - 100)
-        .attr("height", height - 300)
-        .attr("viewBox", `0 0 ${width} ${height}`);
-    
-    const margin = {top: 30, right: 20, bottom: 50, left: 50};
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
-    
-    const processedData = data.map(d => ({
-        year: new Date(d.registryclosedate).getFullYear(),
-        value: parseFloat(d.value),
-        currency: d.currencyid,
-        date: d.registryclosedate
-    }));
-    
-    const groupedData = d3.rollup(
-        processedData,
-        v => d3.sum(v, d => d.value),
-        d => d.year
-    );
-    
-    const yearData = Array.from(groupedData, ([year, value]) => ({year, value}))
-                       .sort((a, b) => a.year - b.year);
-    
-    const x = d3.scaleBand()
-        .domain(yearData.map(d => d.year.toString()))
-        .range([0, innerWidth])
-        .padding(0.2);
-    
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(yearData, d => d.value) * 1.1])
-        .range([innerHeight, 0]);
-    
+    // Create a structured info display
+    const infoBox = container.append("div")
+        .attr("class", "company-info-box");
 
-    const g = svg.append("g")
-        .attr("transform", `translate(${margin.left},${margin.top})`);
-    
-    g.selectAll(".bar")
-        .data(yearData)
-        .enter()
-        .append("rect")
-        .attr("class", "bar")
-        .attr("x", d => x(d.year.toString()))
-        .attr("y", d => y(d.value))
-        .attr("width", x.bandwidth())
-        .attr("height", d => innerHeight - y(d.value))
-        .attr("fill", "#4285f4");
-    
-    g.selectAll(".bar-label")
-        .data(yearData)
-        .enter()
-        .append("text")
-        .attr("class", "bar-label")
-        .attr("x", d => x(d.year.toString()) + x.bandwidth() / 2)
-        .attr("y", d => y(d.value) - 5)
-        .attr("text-anchor", "middle")
-        .style("font-size", "10px")
-        .text(d => d.value.toFixed(1));
-    
-    g.append("g")
-        .attr("class", "axis axis-x")
-        .attr("transform", `translate(0,${innerHeight})`)
-        .call(d3.axisBottom(x));
-    
-    g.append("g")
-        .attr("class", "axis axis-y")
-        .call(d3.axisLeft(y).ticks(5));
-    
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", 20)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .style("font-weight", "bold")
-        .text(`Дивиденды ${data[0].DIV_TICK} по годам (${data[0].currencyid})`);
-    
-    svg.append("text")
-        .attr("x", width / 2)
-        .attr("y", height - 10)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Год");
-    
-    svg.append("text")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -height / 2)
-        .attr("y", 15)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .text("Сумма");
-    }else {
-        const container = document.getElementById('additional_content');
+    const company = tickerInfo.filter(d => d.ticker === tickerName);
+    if (company) {
+        // Add company name and ticker
+        infoBox.append("h3")
+            .text(`${company[0].name} (${company[0].ticker})`);
         
+        // Add sector information
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Сектор:</span> ${company[0].sector}`);
 
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Тип:</span> ${typeName}\n`);
+        
+        // Add description
+        infoBox.append("div")
+            .attr("class", "info-description")
+            .text(company[0].description);
+
+    } else {
+        infoBox.append("div")
+            .attr("class", "no-data")
+            .text(`Нет информации по ${tickerName}`);
+    }
+
+}
+
+function createDividend(data) {
+    if (data.length > 0) {
+        const container = d3.select("#additional_content");
+        container.selectAll("*").remove();
+        // Set container to occupy half of parent width
+        
+        // Create tooltip
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "white")
+            .style("border", "1px solid #ddd")
+            .style("padding", "8px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none");
+
+        // Get the adjusted container width
+        const containerWidth = container.node().getBoundingClientRect().width;
+        const width = containerWidth - 40;
+        const height = 400;
+        const margin = {top: 40, right: 30, bottom: 100, left: 60};
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+        const timeFormat = d3.timeFormat("%b %Y");
+
+        const svg = container.append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Process data
+        const processedData = data.map(d => ({
+            name: timeFormat(new Date(d.registryclosedate)),
+            value: parseFloat(d.value),
+            currency: d.currencyid
+        }));
+
+        // Create scales
+        const x = d3.scaleBand()
+            .domain(processedData.map(d => d.name))
+            .range([0, innerWidth])
+            .padding(0.3);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(processedData, d => d.value) * 1.1])
+            .nice()
+            .range([innerHeight, 0]);
+
+        // Custom color palette
+        const colorPalette = [
+            "#e18d6e", // dark green
+            "#d08cb5", // gray-green
+            "#9b7ab2", // red
+            "#8584bd",
+            "#87adda", // light pink
+            "#7cbbc6", //light green
+            "#86bf9e", // very light gray
+            "#beda97",
+            "#f8f19f",
+            "#f0c486"
+        ];
+
+        // Add Y-axis with grid lines
+        svg.append("g")
+            .attr("class", "y-axis")
+            .call(d3.axisLeft(y)
+                .tickSize(-innerWidth)
+                .tickFormat(d => `${d} руб.`)
+            )
+            .call(g => g.select(".domain").remove())
+            .call(g => g.selectAll(".tick line")
+                .attr("stroke-opacity", 0.1)
+            );
+
+        // Add bars with custom colors and hover effects
+        svg.selectAll(".bar")
+            .data(processedData)
+            .enter().append("rect")
+            .attr("class", "bar")
+            .attr("x", d => x(d.name))
+            .attr("y", d => y(d.value))
+            .attr("width", x.bandwidth())
+            .attr("height", d => innerHeight - y(d.value))
+            .attr("fill", (d, i) => colorPalette[i % colorPalette.length])
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1)
+            .on("mouseover", function(event, d) {
+                d3.select(this)
+                    .attr("opacity", 0.8)
+                
+                tooltip.transition()
+                    .duration(200)
+                    .style("opacity", 0.9);
+                
+                tooltip.html(`
+                    <strong>${d.name} год</strong><br>
+                    ${d.value.toFixed(2)} ${d.currency}
+                `)
+                .style("left", (event.pageX + 15) + "px")
+                .style("top", (event.pageY - 40) + "px");
+            })
+            .on("mouseout", function() {
+                d3.select(this)
+                    .attr("opacity", 1)
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 1);
+                
+                tooltip.transition()
+                    .duration(500)
+                    .style("opacity", 0);
+            });
+
+        // Add X-axis with rotated labels
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x))
+            .selectAll("text")
+            .attr("transform", "rotate(-35)")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .style("font-size", "10px");
+    
+        // Add chart title
+        svg.append("text")
+            .attr("x", innerWidth / 2 - 25)
+            .attr("y", -13)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .text(`Дивиденды ${data[0].DIV_TICK} (${data[0].currencyid})`);
+
+        // Add X-axis label
+        svg.append("text")
+            .attr("x", innerWidth / 2 - 30)
+            .attr("y", innerHeight + margin.bottom - 40)
+            .attr("text-anchor", "middle")
+            .style("font-size", "12px")
+            .text("Год");
+            
+        addInfo("stocks", data[0].DIV_TICK)
+
+    } else {
+        const container = document.getElementById('additional_content');
         if (container) {
             container.innerHTML = "";
             container.textContent = "Нет данных о дивидендах для этой компании";
             container.style.textAlign = "center";
-            container.style.fontSize = "20px";
+            container.style.fontSize = "16px";
+            container.style.padding = "20px";
+            container.style.color = "#666";
         }
     }
 }
@@ -541,15 +627,15 @@ function updateStructureCharts() {
     const indexName = moexData.composition[selectedIndex]?.name || 
                      moexData.sectors[selectedIndex]?.name || 
                      selectedIndex;
+                     
     if (tickerData.length > 0) {
-        
-        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, indexName);
+        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, selectedIndex);
     } else {
         d3.select("#pie-chart").html("<p>No ticker data available</p>");
     }
     
     if (sectorData.length > 0) {
-        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, indexName);
+        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, selectedIndex);
     } else {
         d3.select("#bar-chart").html("<p>No sector data available</p>");
     }
@@ -591,7 +677,7 @@ function createPieChart(data, containerId, title, indexName) {
     const width = containerWidth - 40;
     const height = 400;
     const radius = Math.min(width, height) / 2 - 40;
-    
+
     const svg = container.append("svg")
         .attr("width", width)
         .attr("height", height)
@@ -602,30 +688,64 @@ function createPieChart(data, containerId, title, indexName) {
     const arc = d3.arc().innerRadius(0).outerRadius(radius);
     
     const arcs = pie(data);
+
+    const tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0)
+    .style("position", "absolute")
+    .style("background", "white")
+    .style("border", "1px solid #ddd")
+    .style("padding", "8px")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none")
+    .style("font-size", "12px");
+
+    const colorPalette = [
+        "#e18d6e", // dark green
+        "#d08cb5", // gray-green
+        "#9b7ab2", // red
+        "#8584bd",
+        "#87adda", // light pink
+        "#7cbbc6", //light green
+        "#86bf9e", // very light gray
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
+    ];
     
     svg.selectAll("path")
         .data(arcs)
         .enter().append("path")
         .attr("d", arc)
-        .attr("fill", (d, i) => d3.schemeTableau10[i % 10])
+        .attr("fill", (d, i) => colorPalette[i % colorPalette.length])
         .attr("stroke", "white")
         .on("mouseover", function(event, d) {
-            d3.select(this).attr("opacity", 0.8);
+            d3.select(this)
+                .attr("opacity", 0.8)
+            
             tooltip.transition()
                 .duration(200)
-                .style("opacity", .9);
-            tooltip.html(`${d.data.name}<br>${d.data.value}%`)
-                .style("left", (event.pageX + 10) + "px")
-                .style("top", (event.pageY - 28) + "px");
+                .style("opacity", 0.9);
+            
+            tooltip.html(`
+                <strong>${d.data.name}</strong> ${d.data.value}%
+            `)
+            .style("left", (event.pageX + 15) + "px")
+            .style("top", (event.pageY - 40) + "px");
         })
         .on("mouseout", function() {
-            d3.select(this).attr("opacity", 1);
+            d3.select(this)
+                .attr("opacity", 1)
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1);
+            
             tooltip.transition()
                 .duration(500)
                 .style("opacity", 0);
         });
     
     svg.append("text")
+        .attr("x", 30)
         .attr("y", -height/2 + 20)
         .attr("text-anchor", "middle")
         .text(title)
@@ -642,7 +762,7 @@ function createPieChart(data, containerId, title, indexName) {
     legend.append("rect")
     .attr("width", 16)
     .attr("height", 16)
-    .attr("fill", (d, i) => colorScale(i));
+    .attr("fill", (d, i) => colorPalette[i % colorPalette.length]);
 
     legend.append("text")
     .attr("x", 24)
@@ -657,11 +777,36 @@ function createBarChart(data, containerId, title, indexName) {
     container.selectAll("*").remove();
 
     const containerWidth = container.node().getBoundingClientRect().width;
-    const width = containerWidth - 40;
+    const width = containerWidth;
     const height = 400;
     const margin = {top: 40, right: 30, bottom: 100, left: 60};
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
+
+    addInfo("indexes", indexName)
+
+    const tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0)
+    .style("position", "absolute")
+    .style("background", "white")
+    .style("border", "1px solid #ddd")
+    .style("padding", "8px")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none");
+
+    const colorPalette = [
+        "#e18d6e", // dark green
+        "#d08cb5", // gray-green
+        "#9b7ab2", // red
+        "#8584bd",
+        "#87adda", // light pink
+        "#7cbbc6", //light green
+        "#86bf9e", // very light gray
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
+    ];
 
     const svg = container.append("svg")
         .attr("width", width)
@@ -682,6 +827,17 @@ function createBarChart(data, containerId, title, indexName) {
         .domain([0, d3.max(validData, d => d.value) * 1.1])
         .range([innerHeight, 0]);
 
+    svg.append("g")
+        .attr("class", "y-axis")
+        .call(d3.axisLeft(y)
+            .tickSize(-innerWidth) // Add grid lines across width
+            .tickFormat(d => `${d} %`)
+        )
+        .call(g => g.select(".domain").remove()) // Remove axis line
+        .call(g => g.selectAll(".tick line")
+            .attr("stroke-opacity", 0.1) // Make grid lines subtle
+        );
+
     svg.selectAll(".bar")
         .data(validData)
         .enter().append("rect")
@@ -690,13 +846,13 @@ function createBarChart(data, containerId, title, indexName) {
         .attr("y", d => y(d.value))
         .attr("width", x.bandwidth())
         .attr("height", d => innerHeight - y(d.value))
-        .attr("fill", (d, i) => d3.schemeTableau10[i % 10])
+        .attr("fill", (d, i) => colorPalette[i % colorPalette.length])
         .on("mouseover", function(event, d) {
             d3.select(this).attr("opacity", 0.8);
             tooltip.transition()
                 .duration(200)
                 .style("opacity", .9);
-            tooltip.html(`${d.name}<br>${d.value.toFixed(1)}%`)
+            tooltip.html(`<strong>${d.name}</strong> ${d.value}%`)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 28) + "px");
         })
@@ -711,17 +867,14 @@ function createBarChart(data, containerId, title, indexName) {
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .attr("transform", "rotate(-45)")
+        .attr("transform", "rotate(-25)")
         .attr("text-anchor", "end")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .style("font-size", "10px");
 
-    svg.append("g")
-        .call(d3.axisLeft(y).ticks(5));
-
     svg.append("text")
-        .attr("x", innerWidth / 2)
+        .attr("x", 600)
         .attr("y", -20)
         .attr("text-anchor", "middle")
         .text(title)
@@ -733,16 +886,18 @@ function createBarChart(data, containerId, title, indexName) {
     .enter()
     .append("g")
     .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(${innerWidth - 200},${20 + i * 20})`);
+    .attr("transform", (d, i) => `translate(${innerWidth - 300},${20 + i * 20})`);
 
     legend.append("rect")
     .attr("width", 16)
     .attr("height", 16)
-    .attr("fill", (d, i) => d3.schemeTableau10[i % 10]);
+    .attr("x", -20)
+    .attr("y", -30)
+    .attr("fill", (d, i) => colorPalette[i % colorPalette.length])
 
     legend.append("text")
-    .attr("x", 24)
-    .attr("y", 12)
+    .attr("x", 5)
+    .attr("y", -17.5)
     .text(d => `${d.name} (${d.value.toFixed(1)}%)`)
     .style("font-size", "12px");
 }
@@ -807,14 +962,14 @@ function updateMainChart(filteredData) {
                 .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
                 .attr("width", candleWidth)
                 .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
-                .attr("fill", d.type === 'bullish' ? '#4CAF50' : '#F44336');
+                .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
             
             g.append("line")
                 .attr("x1", 0)
                 .attr("x2", 0)
                 .attr("y1", yMainScale(d.high))
                 .attr("y2", yMainScale(d.low))
-                .attr("stroke", d.type === 'bullish' ? '#4CAF50' : '#F44336')
+                .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
                 .attr("stroke-width", 1);
         });
 }
@@ -941,9 +1096,9 @@ function createOpenPriceChart(tickerName) {
     let currentPriceType = "open";
     let currentPeriod = "5y";
 
-    const width = container.node().getBoundingClientRect().width - 300
-    const height = 310;
-    const margin = {top: 50, right: 100, bottom: 0, left: 150};
+    const width = container.node().getBoundingClientRect().width/1.22
+    const height = 370;
+    const margin = {top: 25, bottom: 0, left: 80};
     const innerWidth = width;
     const innerHeight = height;
 
@@ -963,7 +1118,7 @@ function createOpenPriceChart(tickerName) {
     const path = svg.append("path")
         .attr("class", "price-line")
         .attr("fill", "none")
-        .attr("stroke", "#4285f4")
+        .attr("stroke", "#9baf9f")
         .attr("stroke-width", 2);
 
     const focus = svg.append("g")
@@ -972,7 +1127,7 @@ function createOpenPriceChart(tickerName) {
 
     focus.append("circle")
         .attr("r", 5)
-        .attr("fill", "#F44336")
+        .attr("fill", "#e5ac9d")
         .attr("stroke", "white")
         .attr("stroke-width", 2);
 
@@ -993,7 +1148,7 @@ function createOpenPriceChart(tickerName) {
 
     const xAxis = svg.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${innerHeight})`);
+        .attr("transform", `translate(0,${innerHeight})`)
 
     const yAxis = svg.append("g")
         .attr("class", "y-axis");
@@ -1004,13 +1159,6 @@ function createOpenPriceChart(tickerName) {
         .attr("text-anchor", "middle")
         .style("font-size", "16px")
         .style("font-weight", "bold");
-
-    svg.append("text")
-        .attr("class", "x-axis-label")
-        .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 35)
-        .attr("text-anchor", "middle")
-        .text("Дата");
 
     const yAxisLabel = svg.append("text")
         .attr("class", "y-axis-label")
@@ -1043,7 +1191,7 @@ function createOpenPriceChart(tickerName) {
         path.datum(periodData)
             .transition()
             .duration(500)
-            .attr("d", line);
+            .attr("d", line)
 
         let xAxisFormatter;
         let tickValues;
@@ -1079,16 +1227,21 @@ function createOpenPriceChart(tickerName) {
         }
 
         xAxis.transition().duration(500)
-            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter);
+            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter)
+            .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-35)"); 
         
         yAxis.transition().duration(500)
             .call(d3.axisLeft(y));
 
         const priceLabels = {
-            open: "Цена открытия",
-            close: "Цена закрытия",
-            high: "Максимальная цена",
-            low: "Минимальная цена"
+            open: "Цена открытия (руб.)",
+            close: "Цена закрытия (руб.)",
+            high: "Максимальная цена (руб.)",
+            low: "Минимальная цена (руб.)"
         };
         
         title.text(`${priceLabels[currentPriceType]} для ${tickerName}`);
@@ -1109,7 +1262,7 @@ function createOpenPriceChart(tickerName) {
 
     function mousemove(event) {
         const periodData = filterByPeriodEx(tickerData, currentPeriod);
-        const x0 = x.invert(d3.pointer(event)[0]);
+        const x0 = x.invert(d3.pointer(event, this)[0]);
         const i = bisectDate(periodData, x0, 1);
         const d0 = periodData[i - 1];
         const d1 = periodData[i];
@@ -1123,21 +1276,41 @@ function createOpenPriceChart(tickerName) {
             low: "Минимум"
         };
         
-        focus.attr("transform", `translate(${x(d.begin)},${y(d[currentPriceType])})`);
+        // Position the circle marker
+        const xPos = x(d.begin);
+        const yPos = y(d[currentPriceType]);
+        focus.attr("transform", `translate(${xPos},${yPos})`);
         
+        // Clear and update tooltip text only
         const tooltipText = focus.select("text.tooltip-text")
-            .html("");
+            .html("")
+            .attr("transform", "translate(0,20)");
         
-        tooltipText.selectAll("tspan")
-            .data([
-                `${priceLabels[currentPriceType]} ${formattedDate}:`,
-                `${d[currentPriceType].toFixed(2)}`
-            ])
-            .enter()
-            .append("tspan")
+        // Add tooltip content
+        tooltipText.append("tspan")
             .attr("x", 10)
-            .attr("dy", (d, i) => i ? "1.2em" : 0)
-            .text(d => d);
+            .attr("dy", "0")
+            .text(`${priceLabels[currentPriceType]} ${formattedDate}:`);
+        
+        tooltipText.append("tspan")
+            .attr("x", 10)
+            .attr("dy", "1.2em")
+            .text(`${d[currentPriceType].toFixed(2)} руб.`);
+        
+        // Handle edge cases for text-only tooltip
+        const textBBox = tooltipText.node().getBBox();
+        let tooltipX = 10;
+        let textAnchor = "start";
+        
+        // Right edge check
+        if (xPos > innerWidth - textBBox.width - 20) {
+            tooltipX = -10;
+            textAnchor = "end";
+        }
+        
+        // Apply positioning
+        tooltipText.attr("transform", `translate(${tooltipX},20)`)
+                  .attr("text-anchor", textAnchor);
     }
 
     const bisectDate = d3.bisector(d => d.begin).left;
@@ -1158,13 +1331,13 @@ function setupFilterControls(tickerName) {
     const isInd = tickerSets.indices.includes(tickerName);
     const initialFilter = isInd ? "indices" : "stocks";
     filterContainer.className = "filter-container";
-    filterContainer.style.margin = "10px 0";
+    filterContainer.style.margin = "10px 20px";
     filterContainer.style.display = "flex";
     filterContainer.style.alignItems = "center";
     filterContainer.style.gap = "10px";
 
     filterContainer.innerHTML = `
-        <span>Показать:</span>
+        <span>Показать популярные:</span>
         <button id="stocks-filter" class="filter-btn ${!isInd ? 'active' : ''}">Акции</button>
         <button id="indices-filter" class="filter-btn ${isInd? 'active' : ''}">Индексы</button>
         <div id="ticker-buttons" class="ticker-buttons"></div>
@@ -1284,3 +1457,13 @@ function updateTickerButtons(type) {
         buttonsContainer.appendChild(btn);
     });
 }
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+  
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2000);
+  }

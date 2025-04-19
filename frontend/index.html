@@ -11,17 +11,24 @@
     <header>
       <div class="nav-links">
         <div class="search-container" id="headerSearch"></div>
-        <a href="#" id="homeLink">На главную</a>
-        <a href="compare.html" id="compareLink">Сравнение индексов</a>
+        <a href="index.html" id="homeLink" style="font-weight: 700;">Данные акций и индексов</a>
+        <a href="compare.html" id="compareLink" style="font-weight: 700;">Сравнение акций и индексов</a>
+        <a href="info.html" id="aboutLink" style="font-weight: 700;"> О нас</a>
       </div>
     </header>
 
     <main id="content">
       <div id="chart-container">
-        <div id="main-chart"></div>
+        <div id="main-chart" class="main-chart-style"></div>
         <div id="volume-chart"></div>
       </div>
-      <div id="additional_content"></div>
+      <div class="dividends_info">
+        <div class="left-column">
+          <div id="company_info_stocks" class="info"></div>
+          <div id="additional_content" class="info"></div>
+        </div>
+        <div id="open-price-chart-container" class="small-chart-style"></div>
+      </div>
 
       <div class="index-structure-container">
         <h2 style="margin-left: 2%">Данные по индексам MOEX</h2>
@@ -43,17 +50,17 @@
           </select>
         </div>
         <div class="structure-charts">
-          <div id="pie-chart" class="structure-chart">
-            <p>Ticker composition will be shown here</p>
+          <div class="left-column2">
+            <div id="company_info_other" class="info"></div>
+            <div id="pie-chart" class="structure-chart bottom-chart"></div>
           </div>
-          <div id="bar-chart" class="structure-chart">
-            <p>Sector weights will be shown here</p>
-          </div>
+          <div id="open-price-chart-container" class="small-chart-style"></div>
+          <div id="bar-chart" class="structure-chart"></div>
         </div>
       </div>
 
-      <div id="open-price-chart-container" class="chart-container"></div>
     </main>
     <script src="script.js"></script>
+    <div id="toast" class="toast-notification"></div>
   </body>
 </html>

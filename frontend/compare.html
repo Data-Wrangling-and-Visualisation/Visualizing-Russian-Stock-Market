@@ -10,25 +10,65 @@
   <body>
     <header>
       <div class="nav-links">
-        <a href="index.html" id="homeLink">На главную</a>
-        <a href="compare.html" id="compareLink">Сравнение индексов</a>
+        <div id="title_page">Сравнение динамики индексов и акций</div>
+        <a href="index.html" id="homeLink" style="font-weight: 700;">Данные акций и индексов</a>
+        <a href="compare.html" id="compareLink" style="font-weight: 700;">Сравнение акций и индексов</a>
+        <a href="info.html" id="aboutLink" style="font-weight: 700;"> О нас</a>
       </div>
     </header>
     <div class="chart-container">
-      <h1>Сравнение динамики индексов</h1>
-      <div class="index-selector">
-        <div class="index-option">
-          <label for="index1">Синий индекс:</label>
-          <select id="index1"></select>
-        </div>
-        <div class="index-option">
-          <label for="index2">Красный индекс:</label>
-          <select id="index2"></select>
+      <div class="comparison-mode-container">
+        <div class="comparison-mode">
+          <span class="show-label">Показать:</span>
+          <button id="compareIndices" class="active">Сравнить индексы</button>
+          <button id="compareStocks">Сравнить акции</button>
+          <button id="compareMixed">Сравнить индекс и акцию</button>
         </div>
       </div>
+
+      <div id="indicesComparison">
+        <div class="index-selector">
+          <div class="index-option">
+            <label for="index1">Первый индекс:</label>
+            <select id="index1"></select>
+          </div>
+          <div class="index-option">
+            <label for="index2">Второй индекс:</label>
+            <select id="index2"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="stocksComparison" style="display: none">
+        <div class="stock-selector">
+          <div class="stock-option">
+            <label for="stock1">Первая акция:</label>
+            <select id="stock1"></select>
+          </div>
+          <div class="stock-option">
+            <label for="stock2">Вторая акция:</label>
+            <select id="stock2"></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="mixedComparison" style="display: none">
+        <div class="mixed-selector">
+          <div class="mixed-option">
+            <label for="mixed1" data-type="index">Индекс:</label>
+            <select id="mixed1"></select>
+          </div>
+          <div class="mixed-option">
+            <label for="mixed2" data-type="stock">Акция:</label>
+            <select id="mixed2"></select>
+          </div>
+        </div>
+      </div>
+
       <div id="chart"></div>
     </div>
 
     <script src="script_compare.js"></script>
+    <div id="toast" class="toast-notification"></div>
   </body>
 </html>
