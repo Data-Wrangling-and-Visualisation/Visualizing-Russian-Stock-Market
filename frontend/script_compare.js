@@ -1,4 +1,4 @@
-const width = 800,
+const width = 1200,
   height = 500,
   margin = { top: 20, right: 30, bottom: 50, left: 50 };
 const innerWidth = width - margin.left - margin.right;
@@ -140,7 +140,7 @@ function showToast(message) {
 
   setTimeout(() => {
     toast.classList.remove("show");
-  }, 5000);
+  }, 2000);
 }
 
 function updateChart() {
@@ -263,7 +263,7 @@ function updateChart() {
     .append("path")
     .datum(normalized1)
     .attr("class", "line line1")
-    .attr("stroke", "#5a9f53")
+    .attr("stroke", "#86bf9e")
     .attr("stroke-opacity", 0.8)
     .attr("fill", "none")
     .attr("stroke-width", 2)
@@ -273,7 +273,7 @@ function updateChart() {
     .append("path")
     .datum(normalized2)
     .attr("class", "line line2")
-    .attr("stroke", "tomato")
+    .attr("stroke", "#8584bd")
     .attr("stroke-opacity", 0.8)
     .attr("fill", "none")
     .attr("stroke-width", 2)
@@ -296,7 +296,7 @@ function updateChart() {
     .attr("y", 0)
     .attr("width", 10)
     .attr("height", 10)
-    .attr("fill", "#5a9f53");
+    .attr("fill", "#86bf9e");
 
   const isFirstStock =
     comparisonMode === "compareStocks" ||
@@ -315,7 +315,7 @@ function updateChart() {
     .attr("y", 20)
     .attr("width", 10)
     .attr("height", 10)
-    .attr("fill", "tomato");
+    .attr("fill", "#8584bd");
 
   const isSecondStock =
     comparisonMode === "compareStocks" ||

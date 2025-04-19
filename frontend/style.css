@@ -33,6 +33,16 @@ header {
     border-radius: 8px;
     font-size: 14px;
     width: 500px;
+    transition: all 0.1s ease-out;
+}
+
+#tickerInput:focus {
+    outline: none;
+    border: 1px solid #72856d;
+}
+
+#tickerInput:active {
+    border: 1px solid #72856d;
 }
 
 #searchBtn {
@@ -63,37 +73,37 @@ header {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-#chart-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-}
-
 .period-selector {
     display: flex;
-    gap: 10px;
     margin-top: 1rem;
 }
 
 .period-btn {
     background-color: #ecf2ed;
-    border: 1px solid #d2dcd4;
-    padding: 6px 12px;
-    border-radius: 20px;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.3s cubic-bezier(.25,.8,.25,1);
     font-weight: 700;
-    color: #5f6368;
+    color: #436239;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    border-radius: 20px;
+    margin-left: 1%;
 }
-
+  
 .period-btn:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.16);
+    transform: translateY(-1px);
     background-color: #c4d5c7;
 }
-
+  
 .period-btn.active {
     background-color: #436239;
     color: white;
-    border-color: #436239;
+    box-shadow: 0 2px 4px -1px rgba(0,0,0,0.2),
+                0 4px 5px 0 rgba(0,0,0,0.14),
+                0 1px 10px 0 rgba(0,0,0,0.12);
 }
 
 .candle rect {
@@ -132,18 +142,6 @@ header {
     shape-rendering: crispEdges;
 }
 
-#chart-container {
-    max-width: 95%;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    overflow: hidden;
-}
-
-#main-chart, #volume-chart {
-    width: 100%;
-    overflow: visible;
-}
-
 svg {
     width: 100%;
     height: auto;
@@ -159,11 +157,7 @@ svg {
 }
 
 .index-structure-container {
-    margin-top: 30px;
-    border-top: 1px solid #e0e0e0;
     padding-top: 20px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
     padding: 20px;
 }
 
@@ -225,23 +219,24 @@ svg {
 .structure-charts {
     display: flex;
     flex-wrap: wrap;
-    gap: 30px;
-    justify-content: center;
-    margin-top: 20px;
-}
+    gap: 20px;
+    padding: 20px;
+    position: relative;
+  }
 
 .structure-chart {
     flex: 1 1 45%;
-    min-width: 300px;
-    max-width: 600px;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     background-color: white;
     padding-left: 20px;
     padding-top: 7px;
     padding-bottom: 7px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#bar-chart {
+    width: 100%
 }
 
 .chart-title {
@@ -323,53 +318,52 @@ svg {
 }
 
 #open-price-chart-container {
-    width: 87.5%;
-    height: 600px;
-    margin-top: 20px;
-    margin-left: 80px;
+    height: 680px;
     border: 1px solid #e0e0e0;
-    border-radius: 8px;
     padding: 10px;
     background: white;
 }
 
 .tooltip-text {
     font-size: 12px;
-    font-weight: bold;
-    fill: #333;
+    font-family: Arial, sans-serif;
+    pointer-events: none;
 }
 
 .tooltip-text tspan:first-child {
-    font-weight: normal;
-    font-size: 11px;
     fill: #666;
+    font-size: 11px;
 }
 
 .tooltip-text tspan:last-child {
+    fill: #214517;
     font-weight: bold;
-    font-size: 13px;
 }
 
 #open-price-chart-container .filter-container {
-    width: 98.5%;
-    padding: 8px;
+    width: 85%;
+    padding-top: 1%;
+    padding-left: 5%;
+    padding-right: 5%;
+    padding-bottom: 2%;
     background: #f8f8f8;
     border-bottom: 1px solid #eee;
-    border-radius: 8px
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
+/* Button container adjustments */
 .filter-btn {
-    padding: 8px 16px;
-    border: 1px solid #dfe1e5;
-    background-color: #ecf2ed;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 3px;
+    border: 1px solid #dedede;
+    background-color: #dedede;
+    border-radius: 8px;
+    min-width: 580px;
+    font-size: 16px;
     color: #5f6368;
     transition: all 0.2s ease;
-    margin: 0 4px;
-    font-weight: 700;
     cursor: pointer;
     transition: all 0.3s;
     font-weight: 700;
@@ -386,22 +380,22 @@ svg {
 }
 
 .ticker-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-left: 12px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
+    gap: 6px; /* Reduced gap between buttons */
+    width: 100%;
+    margin-left: 2.5%;
 }
 
 .ticker-buttons .ticker-btn {
-    padding: 6px 12px;
     border: 1px solid #dfe1e5;
     background-color: #ecf2ed;
     border-radius: 16px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
-    transition: all 0.2s ease;
     position: relative;
+    transition: all 0.2s ease;
 }
 
 .ticker-buttons .ticker-btn:hover {
@@ -417,15 +411,14 @@ svg {
 .filter-container span {
     font-size: 14px;
     color: #5f6368;
-    margin-right: 8px;
     font-weight: 500;
 }
 
 .price-type-control,
 .period-control {
+    margin-top: -50px;
     margin-right: 30px;
     margin-left: 30px;
-    margin-bottom: 30px;
 }
 
 .price-type-control span,
@@ -478,19 +471,16 @@ svg {
 
 .ticker-hover-info {
     position: absolute;
-    left: 100%;
-    top: 0;
-    margin-left: 10px;
-    padding: 8px;
+    padding: 6px;
     background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    min-width: 120px;
+    min-width: 100px;
     opacity: 0;
     transition: opacity 0.2s ease;
     pointer-events: none;
-    z-index: 10;
+    z-index: 5;
 }
 
 .ticker-name {
@@ -500,6 +490,7 @@ svg {
 .price-change {
     display: block;
     font-size: 12px;
+    width: 150px;
 }
 
 .price-change.positive {
@@ -514,4 +505,131 @@ svg {
     display: block;
     font-size: 12px;
     color: #666;
+}
+
+.dividends_info {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Changed from space-evenly for better edge control */
+    max-width: 1400px; /* Optional: constrain maximum width */
+    margin: 0 auto; /* Center the container */
+    padding: 34px; /* Space from screen edges */
+  }
+  
+.left-column {
+    flex: 1; /* Takes up available space */
+    display: flex;
+    flex-direction: column;
+    gap: 4%;
+  }
+
+
+.info {
+    flex: 1 1 45%;
+    max-width: 590px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: white;
+    padding-left: 20px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+}
+
+.additional_content {
+    min-width: 600px;
+}
+
+.company-info-box {
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+.company-info-box h3 {
+    margin: 0 0 10px 0;
+    color: #436239;
+}
+
+.info-row {
+    margin: 8px 0;
+    font-size: 18px;
+}
+
+.label {
+    font-weight: bold;
+    color: #333;
+    margin-right: 5px;
+}
+
+.info-description {
+    margin-top: 15px;
+    font-size: 16px;
+    line-height: 1.4;
+    color: black;
+}
+
+.no-data {
+    color: #c62f2d;
+    font-style: italic;
+}
+  
+.main-chart-style {
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+  }
+  
+.small-chart-style {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-width: 700px;
+  }
+  
+#volume-chart {
+    border-bottom: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+  }
+
+#main-chart, #volume-chart {
+    overflow: visible;
+    width: 100%;
+}
+
+#chart-container {
+    min-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.left-column2 {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+
+.toast-notification {
+    position: fixed;
+    top: 8%;
+    left: 26.5%;
+    transform: translateX(-50%);
+    background-color: #c62f2d;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    font-weight: bold;
+  }
+  
+.toast-notification.show {
+    opacity: 1;
 }

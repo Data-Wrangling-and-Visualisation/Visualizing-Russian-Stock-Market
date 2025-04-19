@@ -24,18 +24,19 @@ let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
+let tickerInfo = {};
 let moexData = {
     composition: {},
     sectors: {}
 };
+const INDEX_TICKERS = ['IMOEX', 'IMOEX2', 'RTSI', 'IMOEXCNY', 'MOEXBC', 'MOEXOG', 'MOEXEU', 'MOEXTL', 'MOEXMM', 'MOEXFN'];
 let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 let structureTooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 const tickerSets = {
-    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR"],
-    indices: ["IMOEX", "IMOEX2", "RTSI", "IMOEXCNY", "MOEXBC", "MOEXOG",
-        "MOEXEU", "MOEXTL", "MOEXMM", "MOEXFN"]
+    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR", "IRAO", "TATN"],
+    indices: INDEX_TICKERS
 }
 
 async function initApp() {
@@ -71,6 +72,7 @@ async function loadData(ticker) {
         filter_dividends = [...dividends];
         currentTicker = ticker;
         fetchData('dictionary');
+        fetchData('tickerDescr')
 }
 
 async function loadIndexData() {
@@ -96,14 +98,6 @@ async function loadIndexData() {
     }
 }
 
-// async function fetchDividendData(){
-//     const response = await fetch(config.dataDividend);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
 async function fetchData(type) {
     if (type === "dictionary") {
         fetch('http://localhost:5500/api/data/dictionary')
@@ -113,30 +107,18 @@ async function fetchData(type) {
           initAutocomplete();
         })
         .catch(error => console.error("Dictionary download error:", error));
+    } else if (type === "tickerDescr") {
+        fetch('http://localhost:5500/api/data/tickerDescr')
+        .then(response => response.json())
+        .then(data => {
+            tickerInfo = data.tickers;
+        });
     } else {
         const response = await fetch(`http://localhost:5500/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
     }
 }
-
-// async function fetchDataIndex() {
-//     const response = await fetch(config.dataIndex);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
-// async function fetchDictionary(){
-//     fetch('tickerDictionary.json')
-// .then(response => response.json())
-// .then(data => {
-//   tickerMap = data;
-//   initAutocomplete();
-// })
-// .catch(error => console.error("Ошибка загрузки словаря:", error));
-// }
 
 function setupUI() {
     const headerSearch = document.getElementById('headerSearch');
@@ -169,9 +151,9 @@ function setupUI() {
     const periodSelector = document.createElement("div");
     periodSelector.className = "period-selector";
     periodSelector.innerHTML = `
-        <button class="period-btn active" data-period="month">Месяц</button>
+        <button class="period-btn" data-period="month">Месяц</button>
         <button class="period-btn" data-period="year">Год</button>
-        <button class="period-btn" data-period="all">Все данные</button>
+        <button class="period-btn active" data-period="all">Все данные</button>
     `;
     document.getElementById('chart-container').appendChild(periodSelector);
 }
@@ -222,7 +204,7 @@ function initAutocomplete() {
         createOpenPriceChart(ticker);
       });
     } else {
-      alert("Ничего не найдено! Проверьте название или тикер.");
+      showToast("Ничего не найдено! Проверьте название или тикер.")
     }
   }
 
@@ -269,7 +251,7 @@ function adjustXTicks(scale, width) {
 function createCombinedCharts(data, ticker) {
     const containerWidth = document.getElementById('chart-container').clientWidth;
     const width = containerWidth - 20;
-    const mainHeight = config.mainChart.height;
+    const mainHeight = config.mainChart.height + 50;
     const volumeHeight = config.volumeChart.height;
 
     d3.select("#main-chart").html("");
@@ -379,14 +361,50 @@ function createVolumeChart(svg, data, width, height) {
         .text("Объем торгов");
 }
 
+function addInfo(type, tickerName) {
+    // Select the appropriate container based on type
+    const typeName = type === "stocks" ? "Акция" : "Индекс";
+    const containerId = type === "stocks" ? "#company_info_stocks" : "#company_info_other";
+    const container = d3.select(containerId);
+    container.selectAll("*").remove(); // Clear previous content
+    
+    // Create a structured info display
+    const infoBox = container.append("div")
+        .attr("class", "company-info-box");
+
+    const company = tickerInfo.filter(d => d.ticker === tickerName);
+    if (company) {
+        // Add company name and ticker
+        infoBox.append("h3")
+            .text(`${company[0].name} (${company[0].ticker})`);
+        
+        // Add sector information
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Сектор:</span> ${company[0].sector}`);
+
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Тип:</span> ${typeName}\n`);
+        
+        // Add description
+        infoBox.append("div")
+            .attr("class", "info-description")
+            .text(company[0].description);
+
+    } else {
+        infoBox.append("div")
+            .attr("class", "no-data")
+            .text(`Нет информации по ${tickerName}`);
+    }
+
+}
+
 function createDividend(data) {
     if (data.length > 0) {
         const container = d3.select("#additional_content");
         container.selectAll("*").remove();
-        
         // Set container to occupy half of parent width
-        container.style("width", "50%");
-        container.style("margin-left", "2.5%");
         
         // Create tooltip
         const tooltip = d3.select("body").append("div")
@@ -401,9 +419,9 @@ function createDividend(data) {
 
         // Get the adjusted container width
         const containerWidth = container.node().getBoundingClientRect().width;
-        const width = containerWidth;
+        const width = containerWidth - 40;
         const height = 400;
-        const margin = {top: 40, right: 20, bottom: 100, left: 60};
+        const margin = {top: 40, right: 30, bottom: 100, left: 60};
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
         const timeFormat = d3.timeFormat("%b %Y");
@@ -434,12 +452,16 @@ function createDividend(data) {
 
         // Custom color palette
         const colorPalette = [
-            "#214517", // dark green
-            "#9baf9f", // gray-green
-            "#c62f2d", // red
-            "#e5ac9d", // light pink
-            "#638159", //light green
-            "#cbc8c9" // very light gray
+            "#e18d6e", // dark green
+            "#d08cb5", // gray-green
+            "#9b7ab2", // red
+            "#8584bd",
+            "#87adda", // light pink
+            "#7cbbc6", //light green
+            "#86bf9e", // very light gray
+            "#beda97",
+            "#f8f19f",
+            "#f0c486"
         ];
 
         // Add Y-axis with grid lines
@@ -520,6 +542,8 @@ function createDividend(data) {
             .attr("text-anchor", "middle")
             .style("font-size", "12px")
             .text("Год");
+            
+        addInfo("stocks", data[0].DIV_TICK)
 
     } else {
         const container = document.getElementById('additional_content');
@@ -566,13 +590,13 @@ function updateStructureCharts() {
                      selectedIndex;
                      
     if (tickerData.length > 0) {
-        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, indexName);
+        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, selectedIndex);
     } else {
         d3.select("#pie-chart").html("<p>No ticker data available</p>");
     }
     
     if (sectorData.length > 0) {
-        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, indexName);
+        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, selectedIndex);
     } else {
         d3.select("#bar-chart").html("<p>No sector data available</p>");
     }
@@ -638,12 +662,16 @@ function createPieChart(data, containerId, title, indexName) {
     .style("font-size", "12px");
 
     const colorPalette = [
-        "#214517", // dark green
-        "#9baf9f", // gray-green
-        "#c62f2d", // red
-        "#e5ac9d", // light pink
-        "#638159", //light green
-        "#cbc8c9" // very light gray
+        "#e18d6e", // dark green
+        "#d08cb5", // gray-green
+        "#9b7ab2", // red
+        "#8584bd",
+        "#87adda", // light pink
+        "#7cbbc6", //light green
+        "#86bf9e", // very light gray
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
     ];
     
     svg.selectAll("path")
@@ -710,11 +738,13 @@ function createBarChart(data, containerId, title, indexName) {
     container.selectAll("*").remove();
 
     const containerWidth = container.node().getBoundingClientRect().width;
-    const width = containerWidth - 40;
+    const width = containerWidth;
     const height = 400;
     const margin = {top: 40, right: 30, bottom: 100, left: 60};
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
+
+    addInfo("indexes", indexName)
 
     const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
@@ -727,12 +757,16 @@ function createBarChart(data, containerId, title, indexName) {
     .style("pointer-events", "none");
 
     const colorPalette = [
-        "#214517", // dark green
-        "#9baf9f", // gray-green
-        "#c62f2d", // red
-        "#e5ac9d", // light pink
-        "#638159", //light green
-        "#cbc8c9" // very light gray
+        "#e18d6e", // dark green
+        "#d08cb5", // gray-green
+        "#9b7ab2", // red
+        "#8584bd",
+        "#87adda", // light pink
+        "#7cbbc6", //light green
+        "#86bf9e", // very light gray
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
     ];
 
     const svg = container.append("svg")
@@ -794,14 +828,14 @@ function createBarChart(data, containerId, title, indexName) {
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .attr("transform", "rotate(-45)")
+        .attr("transform", "rotate(-25)")
         .attr("text-anchor", "end")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .style("font-size", "10px");
 
     svg.append("text")
-        .attr("x", 220)
+        .attr("x", 600)
         .attr("y", -20)
         .attr("text-anchor", "middle")
         .text(title)
@@ -813,7 +847,7 @@ function createBarChart(data, containerId, title, indexName) {
     .enter()
     .append("g")
     .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(${innerWidth - 200},${20 + i * 20})`);
+    .attr("transform", (d, i) => `translate(${innerWidth - 300},${20 + i * 20})`);
 
     legend.append("rect")
     .attr("width", 16)
@@ -824,7 +858,7 @@ function createBarChart(data, containerId, title, indexName) {
 
     legend.append("text")
     .attr("x", 5)
-    .attr("y", -20)
+    .attr("y", -17.5)
     .text(d => `${d.name} (${d.value.toFixed(1)}%)`)
     .style("font-size", "12px");
 }
@@ -1023,9 +1057,9 @@ function createOpenPriceChart(tickerName) {
     let currentPriceType = "open";
     let currentPeriod = "5y";
 
-    const width = container.node().getBoundingClientRect().width - 300
-    const height = 310;
-    const margin = {top: 50, right: 100, bottom: 0, left: 150};
+    const width = container.node().getBoundingClientRect().width/1.22
+    const height = 370;
+    const margin = {top: 25, bottom: 0, left: 80};
     const innerWidth = width;
     const innerHeight = height;
 
@@ -1045,7 +1079,7 @@ function createOpenPriceChart(tickerName) {
     const path = svg.append("path")
         .attr("class", "price-line")
         .attr("fill", "none")
-        .attr("stroke", "#214517")
+        .attr("stroke", "#9baf9f")
         .attr("stroke-width", 2);
 
     const focus = svg.append("g")
@@ -1075,7 +1109,7 @@ function createOpenPriceChart(tickerName) {
 
     const xAxis = svg.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${innerHeight})`);
+        .attr("transform", `translate(0,${innerHeight})`)
 
     const yAxis = svg.append("g")
         .attr("class", "y-axis");
@@ -1086,13 +1120,6 @@ function createOpenPriceChart(tickerName) {
         .attr("text-anchor", "middle")
         .style("font-size", "16px")
         .style("font-weight", "bold");
-
-    svg.append("text")
-        .attr("class", "x-axis-label")
-        .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 35)
-        .attr("text-anchor", "middle")
-        .text("Дата");
 
     const yAxisLabel = svg.append("text")
         .attr("class", "y-axis-label")
@@ -1125,7 +1152,7 @@ function createOpenPriceChart(tickerName) {
         path.datum(periodData)
             .transition()
             .duration(500)
-            .attr("d", line);
+            .attr("d", line)
 
         let xAxisFormatter;
         let tickValues;
@@ -1161,7 +1188,12 @@ function createOpenPriceChart(tickerName) {
         }
 
         xAxis.transition().duration(500)
-            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter);
+            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter)
+            .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-35)"); 
         
         yAxis.transition().duration(500)
             .call(d3.axisLeft(y));
@@ -1191,7 +1223,7 @@ function createOpenPriceChart(tickerName) {
 
     function mousemove(event) {
         const periodData = filterByPeriodEx(tickerData, currentPeriod);
-        const x0 = x.invert(d3.pointer(event)[0]);
+        const x0 = x.invert(d3.pointer(event, this)[0]);
         const i = bisectDate(periodData, x0, 1);
         const d0 = periodData[i - 1];
         const d1 = periodData[i];
@@ -1205,21 +1237,41 @@ function createOpenPriceChart(tickerName) {
             low: "Минимум"
         };
         
-        focus.attr("transform", `translate(${x(d.begin)},${y(d[currentPriceType])})`);
+        // Position the circle marker
+        const xPos = x(d.begin);
+        const yPos = y(d[currentPriceType]);
+        focus.attr("transform", `translate(${xPos},${yPos})`);
         
+        // Clear and update tooltip text only
         const tooltipText = focus.select("text.tooltip-text")
-            .html("");
+            .html("")
+            .attr("transform", "translate(0,20)");
         
-        tooltipText.selectAll("tspan")
-            .data([
-                `${priceLabels[currentPriceType]} ${formattedDate}:`,
-                `${d[currentPriceType].toFixed(2)}`
-            ])
-            .enter()
-            .append("tspan")
+        // Add tooltip content
+        tooltipText.append("tspan")
             .attr("x", 10)
-            .attr("dy", (d, i) => i ? "1.2em" : 0)
-            .text(d => d);
+            .attr("dy", "0")
+            .text(`${priceLabels[currentPriceType]} ${formattedDate}:`);
+        
+        tooltipText.append("tspan")
+            .attr("x", 10)
+            .attr("dy", "1.2em")
+            .text(`${d[currentPriceType].toFixed(2)} руб.`);
+        
+        // Handle edge cases for text-only tooltip
+        const textBBox = tooltipText.node().getBBox();
+        let tooltipX = 10;
+        let textAnchor = "start";
+        
+        // Right edge check
+        if (xPos > innerWidth - textBBox.width - 20) {
+            tooltipX = -10;
+            textAnchor = "end";
+        }
+        
+        // Apply positioning
+        tooltipText.attr("transform", `translate(${tooltipX},20)`)
+                  .attr("text-anchor", textAnchor);
     }
 
     const bisectDate = d3.bisector(d => d.begin).left;
@@ -1240,13 +1292,13 @@ function setupFilterControls(tickerName) {
     const isInd = tickerSets.indices.includes(tickerName);
     const initialFilter = isInd ? "indices" : "stocks";
     filterContainer.className = "filter-container";
-    filterContainer.style.margin = "10px 0";
+    filterContainer.style.margin = "10px 20px";
     filterContainer.style.display = "flex";
     filterContainer.style.alignItems = "center";
     filterContainer.style.gap = "10px";
 
     filterContainer.innerHTML = `
-        <span>Показать:</span>
+        <span>Показать популярные:</span>
         <button id="stocks-filter" class="filter-btn ${!isInd ? 'active' : ''}">Акции</button>
         <button id="indices-filter" class="filter-btn ${isInd? 'active' : ''}">Индексы</button>
         <div id="ticker-buttons" class="ticker-buttons"></div>
@@ -1366,3 +1418,13 @@ function updateTickerButtons(type) {
         buttonsContainer.appendChild(btn);
     });
 }
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+  
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2000);
+  }
