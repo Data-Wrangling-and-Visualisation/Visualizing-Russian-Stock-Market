@@ -24,6 +24,7 @@ let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
+let IndexMap = {};
 let moexData = {
     composition: {},
     sectors: {}
@@ -44,9 +45,7 @@ async function initApp() {
     await loadIndexData();
     createCombinedCharts(filteredData, currentTicker);
     createDividend(filter_dividends);
-    createOpenPriceChart(currentTicker);
-    setupPeriodButtons();
-    updateStructureCharts();  
+    createOpenPriceChart(foundTicker);
 }
 
 
@@ -96,47 +95,27 @@ async function loadIndexData() {
     }
 }
 
-// async function fetchDividendData(){
-//     const response = await fetch(config.dataDividend);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
 async function fetchData(type) {
     if (type === "dictionary") {
-        fetch('http://localhost:5500/api/data/dictionary')
-        .then(response => response.json())
-        .then(data => {
-          tickerMap = data;
-          initAutocomplete();
-        })
-        .catch(error => console.error("Dictionary download error:", error));
+        const [tickerResponse, indexResponse] = await Promise.all([
+            fetch('http://localhost:5500/api/data/dictionary'),
+            fetch('http://localhost:5500/api/data/Index_dictionary')
+        ]);
+
+        if (!tickerResponse.ok || !indexResponse.ok) {
+            throw new Error(`HTTP error! Status: ${tickerResponse.status}, ${indexResponse.status}`);
+        }
+
+        tickerMap = await tickerResponse.json();
+        IndexMap = await indexResponse.json();
+
+        initAutocomplete();
     } else {
         const response = await fetch(`http://localhost:5500/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return await response.json();
     }
 }
-
-// async function fetchDataIndex() {
-//     const response = await fetch(config.dataIndex);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
-// async function fetchDictionary(){
-//     fetch('tickerDictionary.json')
-// .then(response => response.json())
-// .then(data => {
-//   tickerMap = data;
-//   initAutocomplete();
-// })
-// .catch(error => console.error("Ошибка загрузки словаря:", error));
-// }
 
 function setupUI() {
     const headerSearch = document.getElementById('headerSearch');
@@ -179,11 +158,16 @@ function setupUI() {
 
 function initAutocomplete() {
     const datalist = document.getElementById('tickerSuggestions');
-    
-    const allOptions = [
-      ...Object.keys(tickerMap), 
-      ...Object.values(tickerMap)
-    ];
+    datalist.innerHTML = ''
+    const allOptions = Array.from(
+        new Set([
+            ...Object.keys(tickerMap), 
+            ...Object.values(tickerMap),
+            ...Object.keys(IndexMap), 
+            ...Object.values(IndexMap)
+        ])
+    );
+      
   
     allOptions.forEach(item => {
       const option = document.createElement('option');
@@ -195,37 +179,73 @@ function initAutocomplete() {
   function searchTicker() {
     const input = document.getElementById('tickerInput').value.trim();
     if (!input) return;
-  
+
     const upperInput = input.toUpperCase();
-  
+
+    // 1. Сначала проверяем точные совпадения с тикерами акций
     const foundTicker = Object.values(tickerMap).find(ticker => 
-      ticker.toUpperCase() === upperInput
+        ticker.toUpperCase() === upperInput
     );
-  
-    if (foundTicker) {
-      loadData(foundTicker).then(() => {
-        createCombinedCharts(filteredData, foundTicker);
-        createDividend(filter_dividends);
-        createOpenPriceChart(foundTicker);
-      });
-      return;
-    }
-  
+
+    // 2. Проверяем точные совпадения с тикерами индексов
+    const foundIndexTicker = Object.keys(IndexMap).find(ticker =>
+        ticker.toUpperCase() === upperInput
+    );
+
+    // 3. Проверяем частичные совпадения с названиями компаний
     const foundCompany = Object.keys(tickerMap).find(company => 
-      company.toUpperCase().includes(upperInput)
+        company.toUpperCase().includes(upperInput)
     );
-  
-    if (foundCompany) {
-      const ticker = tickerMap[foundCompany];
-      loadData(ticker).then(() => {
-        createCombinedCharts(filteredData, ticker);
-        createDividend(filter_dividends);
-        createOpenPriceChart(ticker);
-      });
-    } else {
-      alert("Ничего не найдено! Проверьте название или тикер.");
+
+    // 4. Проверяем частичные совпадения с названиями индексов
+    const foundIndexName = Object.entries(IndexMap).find(([ticker, name]) => 
+        name.toUpperCase().includes(upperInput)
+    );
+
+    if (foundTicker) {
+        // Обработка акции по тикеру (например, SBER)
+        loadData(foundTicker).then(() => {
+            createCombinedCharts(filteredData, foundTicker);
+            createDividend(filter_dividends);
+            createOpenPriceChart(foundTicker);
+        });
+        return;
     }
-  }
+    else if (foundIndexTicker) {
+        // Обработка индекса по тикеру (например, IMOEX)
+        currentTicker = foundIndexTicker;
+        loadData(foundIndexTicker).then(() => {
+            d3.select("#main-chart").html("");
+            d3.select("#volume-chart").html("");
+            createOpenPriceChart(foundIndexTicker);
+            updateStructureCharts();
+        });
+        return;
+    }
+    else if (foundCompany) {
+        // Обработка акции по названию компании
+        const ticker = tickerMap[foundCompany];
+        loadData(ticker).then(() => {
+            createCombinedCharts(filteredData, ticker);
+            createDividend(filter_dividends);
+            createOpenPriceChart(ticker);
+        });
+    }
+    else if (foundIndexName) {
+        // Обработка индекса по названию (например, "Индекс МосБиржи")
+        const [ticker] = foundIndexName;
+        currentTicker = ticker;
+        loadData(ticker).then(() => {
+            d3.select("#main-chart").html("");
+            d3.select("#volume-chart").html("");
+            createOpenPriceChart(ticker);
+            updateStructureCharts();
+        });
+    }
+    else {
+        alert("Тикер не найден! Проверьте название или тикер.");
+    }
+}
 
 function setupScales(data, width, mainHeight, volumeHeight) {
     xMainScale = d3.scaleTime()

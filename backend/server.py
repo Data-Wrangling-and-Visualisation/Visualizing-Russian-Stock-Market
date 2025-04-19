@@ -11,6 +11,7 @@ def get_data(data_type):
         'index': 'combined_data_index.json',
         'dividend': 'div.json',
         "dictionary": "tickerDictionary.json",
+        "Index_dictionary": "indexDictionary.json",
         "indexStructure": "index_structure.json",
         "indexIndustryStructure": "index_industry_structure.json"
     }
