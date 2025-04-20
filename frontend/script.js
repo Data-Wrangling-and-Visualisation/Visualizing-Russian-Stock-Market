@@ -24,6 +24,7 @@ let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
+let tickerInfo = {};
 let IndexMap = {};
 let moexData = {
     composition: {},
@@ -44,8 +45,11 @@ async function initApp() {
     await loadData(currentTicker);
     await loadIndexData();
     createCombinedCharts(filteredData, currentTicker);
+    addTooltip();
     createDividend(filter_dividends);
-    createOpenPriceChart(foundTicker);
+    createOpenPriceChart(currentTicker);
+    setupPeriodButtons();
+    updateStructureCharts();  
 }
 
 
@@ -111,6 +115,12 @@ async function fetchData(type) {
         IndexMap = await indexResponse.json();
 
         initAutocomplete();
+    } else if (type === "tickerDescr") {
+        fetch('http://localhost:5500/api/data/tickerDescr')
+        .then(response => response.json())
+        .then(data => {
+            tickerInfo = data.tickers;
+        });
     } else {
         const response = await fetch(`http://localhost:5500/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -160,29 +170,28 @@ function initAutocomplete() {
     const datalist = document.getElementById('tickerSuggestions');
     datalist.innerHTML = ''
     const allOptions = Array.from(
-        new Set([
-            ...Object.keys(tickerMap), 
-            ...Object.values(tickerMap),
-            ...Object.keys(IndexMap), 
-            ...Object.values(IndexMap)
+         new Set([
+             ...Object.keys(tickerMap), 
+             ...Object.values(tickerMap),
+             ...Object.keys(IndexMap), 
+             ...Object.values(IndexMap)
         ])
     );
       
-  
     allOptions.forEach(item => {
       const option = document.createElement('option');
       option.value = item;
       datalist.appendChild(option);
     });
-  }
+}
 
-  function searchTicker() {
+function searchTicker() {
     const input = document.getElementById('tickerInput').value.trim();
     if (!input) return;
 
     const upperInput = input.toUpperCase();
 
-    // 1. Сначала проверяем точные совпадения с тикерами акций
+    // 1. Проверяем точные совпадения с тикерами акций
     const foundTicker = Object.values(tickerMap).find(ticker => 
         ticker.toUpperCase() === upperInput
     );
@@ -200,44 +209,47 @@ function initAutocomplete() {
     // 4. Проверяем частичные совпадения с названиями индексов
     const foundIndexName = Object.entries(IndexMap).find(([ticker, name]) => 
         name.toUpperCase().includes(upperInput)
+        
     );
 
     if (foundTicker) {
-        // Обработка акции по тикеру (например, SBER)
         loadData(foundTicker).then(() => {
             createCombinedCharts(filteredData, foundTicker);
+            addTooltip();
             createDividend(filter_dividends);
             createOpenPriceChart(foundTicker);
         });
         return;
     }
     else if (foundIndexTicker) {
-        // Обработка индекса по тикеру (например, IMOEX)
         currentTicker = foundIndexTicker;
         loadData(foundIndexTicker).then(() => {
             d3.select("#main-chart").html("");
             d3.select("#volume-chart").html("");
+            createCombinedCharts(filteredData, foundIndexTicker);
+            addTooltip();
             createOpenPriceChart(foundIndexTicker);
             updateStructureCharts();
         });
         return;
     }
     else if (foundCompany) {
-        // Обработка акции по названию компании
         const ticker = tickerMap[foundCompany];
         loadData(ticker).then(() => {
             createCombinedCharts(filteredData, ticker);
+            addTooltip();
             createDividend(filter_dividends);
             createOpenPriceChart(ticker);
         });
     }
     else if (foundIndexName) {
-        // Обработка индекса по названию (например, "Индекс МосБиржи")
         const [ticker] = foundIndexName;
         currentTicker = ticker;
         loadData(ticker).then(() => {
             d3.select("#main-chart").html("");
             d3.select("#volume-chart").html("");
+            createCombinedCharts(filteredData, ticker);
+            addTooltip();
             createOpenPriceChart(ticker);
             updateStructureCharts();
         });
@@ -287,6 +299,115 @@ function adjustXTicks(scale, width) {
     return adjustedTicks;
 }
 
+function addTooltip() {
+    // Очищаем предыдущие элементы tooltip
+    d3.select("#main-chart .chart-tooltip").remove();
+    d3.select("#main-chart svg .tooltip-line").remove();
+    d3.select("#main-chart svg .mouse-tracker").remove();
+
+    const svg = d3.select("#main-chart svg");
+    const margin = config.mainChart.margin;
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    
+    // Создаем tooltip в старом стиле
+    const tooltip = d3.select("#main-chart")
+        .append("div")
+        .attr("class", "chart-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "#fff")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "4px")
+        .style("padding", "8px 12px")
+        .style("font-size", "12px")
+        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
+        .style("pointer-events", "none")
+        .style("z-index", "10");
+
+    // Вертикальная линия (старый стиль)
+    const tooltipLine = svg.append("line")
+        .attr("class", "tooltip-line")
+        .attr("stroke", "#666")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3")
+        .style("opacity", 0);
+
+    // Ограничиваем область действия только графиком свечей
+    const chartArea = {
+        x1: margin.left,
+        x2: width - margin.right,
+        y1: margin.top,
+        y2: height - margin.bottom
+    };
+
+    // Область отслеживания (только в пределах графика свечей)
+    svg.append("rect")
+        .attr("class", "mouse-tracker")
+        .attr("x", chartArea.x1)
+        .attr("y", chartArea.y1)
+        .attr("width", chartArea.x2 - chartArea.x1)
+        .attr("height", chartArea.y2 - chartArea.y1)
+        .style("opacity", 0)
+        .style("pointer-events", "all")
+        .on("mouseover", function() {
+            tooltip.style("visibility", "visible");
+            tooltipLine.style("opacity", 1);
+        })
+        .on("mousemove", function(event) {
+            if (window.isDragging) return;
+            
+            const [x, y] = d3.pointer(event, this);
+            const date = xMainScale.invert(x);
+            
+            // Находим ближайшую свечу
+            const bisect = d3.bisector(d => d.begin).left;
+            const idx = bisect(filteredData, date, 1);
+            const d = filteredData[idx - 1] || filteredData[idx];
+            
+            if (!d) return;
+            
+            // Подсвечиваем свечи этой даты
+            d3.selectAll(".candle")
+                .select("rect")
+                .style("stroke", "none");
+            
+            d3.selectAll(".candle")
+                .filter(candle => candle.begin.getTime() === d.begin.getTime())
+                .select("rect")
+                .style("stroke", "#000")
+                .style("stroke-width", "1px");
+
+            // Обновляем линию
+            const xPos = xMainScale(d.begin);
+            tooltipLine
+                .attr("x1", xPos)
+                .attr("x2", xPos)
+                .attr("y1", 0)
+                .attr("y2", height);
+
+            // Возвращаем старый формат подписей
+            tooltip.html(`
+                <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                <div style="margin-top: 6px;">
+                    <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                    <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                    <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                    <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                    <div>Объем: <strong>${d.volume.toLocaleString()}</strong></div>
+                </div>
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+        })
+        .on("mouseout", function() {
+            tooltip.style("visibility", "hidden");
+            tooltipLine.style("opacity", 0);
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+        });
+}
+
 function createCombinedCharts(data, ticker) {
     const containerWidth = document.getElementById('chart-container').clientWidth;
     const width = containerWidth - 20;
@@ -309,7 +430,6 @@ function createCombinedCharts(data, ticker) {
     setupScales(data, width, mainHeight, volumeHeight);
     createCandlestickChart(mainSvg, data, width, mainHeight, ticker);
     createVolumeChart(volumeSvg, data, width, volumeHeight);
-    addBrush(volumeSvg, data, width, volumeHeight);
 }
 
 function createCandlestickChart(svg, data, width, height, ticker) {
@@ -594,28 +714,6 @@ function createDividend(data) {
             container.style.padding = "20px";
             container.style.color = "#666";
         }
-    }
-}
-
-function addBrush(svg, data, width, height) {
-    brush = d3.brushX()
-        .extent([[config.volumeChart.margin.left, config.volumeChart.margin.top], 
-                [width - config.volumeChart.margin.right, height - config.volumeChart.margin.bottom]])
-        .on("brush end", brushed);
-
-    svg.append("g")
-        .attr("class", "brush")
-        .call(brush);
-
-    function brushed(event) {
-        if (!event.selection) return;
-        
-        const [x0, x1] = event.selection;
-        const date0 = xVolumeScale.invert(x0);
-        const date1 = xVolumeScale.invert(x1);
-        
-        const filtered = allData.filter(d => d.begin >= date0 && d.begin <= date1);
-        updateMainChart(filtered);
     }
 }
 
@@ -911,33 +1009,44 @@ document.getElementById("index-select").addEventListener("change", updateStructu
 function updateMainChart(filteredData) {
     this.filteredData = filteredData;
 
+    // Обновляем домены для обеих шкал X
     xMainScale.domain(d3.extent(filteredData, d => d.begin));
+    xVolumeScale.domain(xMainScale.domain()); // Синхронизируем с основным графиком
+    
+    // Обновляем домен для шкалы Y основного графика
     yMainScale.domain([d3.min(filteredData, d => d.low) * 0.99, 
                       d3.max(filteredData, d => d.high) * 1.01]);
+    
+    // Обновляем домен для шкалы Y графика объема (если нужно)
+    yVolumeScale.domain([0, d3.max(filteredData, d => d.volume)]);
 
     const mainSvg = d3.select("#main-chart svg");
+    const volumeSvg = d3.select("#volume-chart svg");
     const width = document.getElementById('chart-container').clientWidth - 20;
     
+    // Обновляем оси основного графика
     const xAxis = d3.axisBottom(xMainScale)
         .tickFormat(d3.timeFormat("%b %Y"))
         .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right));
     
-    xMainScale.domain(d3.extent(filteredData, d => d.begin));
-    yMainScale.domain([d3.min(filteredData, d => d.low) * 0.99, 
-                      d3.max(filteredData, d => d.high) * 1.01]);
-
-
     mainSvg.select(".x-axis")
         .call(xAxis);
 
     mainSvg.select(".y-axis")
         .call(d3.axisLeft(yMainScale));
 
+    // Обновляем оси графика объема
+    volumeSvg.select(".x-axis")
+        .call(d3.axisBottom(xVolumeScale));
+
+    volumeSvg.select(".y-axis")
+        .call(d3.axisLeft(yVolumeScale).ticks(7));
+
+    // Обновляем свечи на основном графике
     const candles = mainSvg.selectAll(".candle")
         .data(filteredData);
 
     candles.exit().remove();
-
 
     candles.attr("transform", d => `translate(${xMainScale(d.begin)},0)`)
         .select("rect")
@@ -972,6 +1081,25 @@ function updateMainChart(filteredData) {
                 .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
                 .attr("stroke-width", 1);
         });
+
+    // Обновляем график объема
+    const volumes = volumeSvg.selectAll(".volume-bar")
+        .data(filteredData);
+
+    volumes.exit().remove();
+
+    volumes.attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
+        .attr("y", d => yVolumeScale(d.volume))
+        .attr("height", d => volumeSvg.attr("height") - config.volumeChart.margin.bottom - yVolumeScale(d.volume));
+
+    volumes.enter()
+        .append("rect")
+        .attr("class", "volume-bar")
+        .attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
+        .attr("y", d => yVolumeScale(d.volume))
+        .attr("width", config.mainChart.candleWidth)
+        .attr("height", d => volumeSvg.attr("height") - config.volumeChart.margin.bottom - yVolumeScale(d.volume))
+        .attr("fill", "#4285f4");
 }
 
 function setupPeriodButtons() {
@@ -1450,6 +1578,7 @@ function updateTickerButtons(type) {
         btn.addEventListener("click", () => {
             loadData(ticker).then(() => {
                 createCombinedCharts(filteredData, ticker);
+                addTooltip();
                 createDividend(filter_dividends);
                 createOpenPriceChart(ticker);
             });
