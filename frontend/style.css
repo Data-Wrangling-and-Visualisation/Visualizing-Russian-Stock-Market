@@ -15,11 +15,12 @@ header {
 
 .nav-links {
     display: flex;
-    justify-content: space-around;
+    flex-direction: column;
     align-items: center;
+    gap: 15px;
+    padding: 10px 0;
+    margin: 0 auto;
     max-width: 1200px;
-    margin-top: 0.5%;
-    margin-left: 6%;
 }
 
 .search-container {
@@ -76,7 +77,7 @@ header {
 .period-selector {
     display: flex;
     margin-top: 1rem;
-    gap: 10px; /* Use fixed pixel gap instead of percentage for better control */
+    gap: 10px;
     justify-content:space-around;
 }
 
@@ -196,7 +197,7 @@ svg {
 }
 
 #pie-chart {
-    width: 90.8%;
+    max-width: 590px;
 }
 
 .chart-title {
@@ -311,7 +312,6 @@ svg {
     gap: 3px;
 }
 
-/* Button container adjustments */
 .filter-btn {
     padding: 3px;
     border: 1px solid #dedede;
@@ -338,8 +338,8 @@ svg {
 
 .ticker-buttons {
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 equal columns */
-    gap: 6px; /* Reduced gap between buttons */
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
     width: 100%;
     margin-left: 2.5%;
 }
@@ -467,17 +467,17 @@ svg {
 .dividends_info {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center; /* Changed from space-evenly for better edge control */
-    max-width: 1400px; /* Optional: constrain maximum width */
-    margin: 0 auto; /* Center the container */
-    padding: 34px; /* Space from screen edges */
+    justify-content: center;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 34px;
     margin-top: -2%;
-    overflow: visible; /* Critical! */
+    overflow: visible;
     position: relative;
   }
   
 .left-column.active {
-    flex: 1; /* Takes up available space */
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 4%;
@@ -562,7 +562,7 @@ svg {
 
 #chart-container {
     display: grid;
-    justify-items: center; /* Centers children horizontally */
+    justify-items: center;
     max-width: 1500px;
     margin: 0 auto;
     padding: 20px;
@@ -606,7 +606,75 @@ svg {
     display: none;
 }
   
-  /* Show bar-chart only for index view */
 .index-view-active #bar-chart {
     display: flex;
+}
+
+@media (min-width: 600px) {
+    .nav-links {
+      flex-direction: row;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .nav-links a {
+      padding: 6px 12px;
+    }
+    
+    .search-container {
+      flex-direction: row;
+      max-width: 500px;
+    }
+    
+    #tickerInput {
+      width: 350px;
+    }
+    
+    #searchBtn {
+      width: auto;
+    }
+  }
+  
+  @media (min-width: 900px) {
+    .nav-links {
+      justify-content: space-around;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    #tickerInput {
+      width: 400px;
+    }
+  }
+  
+  @media (min-width: 1200px) {
+    .nav-links {
+      max-width: 1400px;
+    }
+    
+    #tickerInput {
+      width: 500px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .nav-links a {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    
+  .search-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  #tickerInput {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  #searchBtn {
+    width: 100%;
+    padding: 10px 16px;
+  }
 }

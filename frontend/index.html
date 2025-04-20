@@ -16,7 +16,6 @@
     document.addEventListener("DOMContentLoaded", function () {
       const sectionImages = document.querySelectorAll(".section-image");
 
-      // If IntersectionObserver is supported
       if ("IntersectionObserver" in window) {
         const observer = new IntersectionObserver(
           (entries) => {
@@ -28,8 +27,8 @@
             });
           },
           {
-            threshold: 0.1, // Trigger when 10% of element is visible
-            rootMargin: "0px 0px -50px 0px", // Reduce bottom margin
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px",
           }
         );
 
@@ -37,14 +36,14 @@
           observer.observe(image);
         });
       }
-      // Fallback for older browsers
+
       else {
         sectionImages.forEach((image) => {
           image.classList.add("in-view");
         });
       }
 
-      // Optional: Add smooth scroll behavior for anchor links
+      // Adding smooth scroll behavior for anchor links
       document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
         anchor.addEventListener("click", function (e) {
           e.preventDefault();
@@ -96,11 +95,12 @@
         <div class="section-image">
           <img src="images/img2.png" alt="Анализ акций" loading="lazy" />
         </div>
-            <p>Перед вами свечевой график отображающий стоимость ценной бумаги. Каждая свеча имеет тело и тени. Телом является стоимостью в момент 
+            <p>Перед вами свечевой график отображающий стоимость ценной бумаги. Каждая свеча имеет тело и тени. Тело является стоимостью в момент 
               открытия и закрытия  бумаги. Тенями являются минимум и максимум в этом день. По вертикальной оси вы можете увидеть стоимость бумаги за одну штуку, на горизонтальной оси
                представлена временная ось. Под ним представлен график объёмов, то есть сколько бумаг было куплено и продано в этот день, вертикальная ось.</p>
                <p>Ниже перед вами представлен график дивидендов, он отражает сколько компания заплатила своим акционерам. 
-                Вертикальная ось показывает сумму выплат, а горизонтальная временной промежуток</p>
+                Вертикальная ось показывает сумму выплат, а горизонтальная - временной промежуток.</p>
+                <p>График сбоку - вспомогательный. Он показывает различные типы цен выбранной акции/выбранного индекса в определенный промежуток времени.</p>
       </section>
 
       <section class="feature-card">
@@ -120,11 +120,16 @@
           <li>Отраслевые структуры индексов</li>
         </ul>
         <div class="section-image">
+          <img src="images/img3.png" alt="Сравнение индексов" loading="lazy" />
+        </div>
+        <div class="section-image">
           <img src="images/img4.png" alt="Сравнение индексов" loading="lazy" />
         </div>
         <div class="section-image">
           <img src="images/img5.png" alt="Сравнение индексов" loading="lazy" />
         </div>
+        <p>Свечной и вспомогательный графики совпадают по своей функциональности с описанными выше.</p>
+        <p>Круговая и столбчатая диаграммы показывают состав индекса и его отраслевую структуру.</p>
       </section>
 
       <section class="feature-card">
@@ -137,7 +142,7 @@
           <img src="images/img6.png" alt="Инструменты анализа" loading="lazy" />
         </div>
         <p>
-          График выше это интерактивный инструмент для сравнения ценных бумаг с
+          График выше - это интерактивный инструмент для сравнения ценных бумаг с
           визуализацией их динамики в процентах. Пользователь может выбрать два
           индекса или акции для сравнения (например, «Индекс МосБиржи» и
           «М.Видео»). Присутствуют такие опции для сравнения: сравнить 2 индекса
@@ -147,7 +152,7 @@
           закрытия. За 0% берется первое начальное значение в наших данных, а
           потом показывается измение относительно этой цены. Пользователь
           выбирает тип сравнения, затем выбирает название индекса/акции. Далее
-          можно провести анализ графиков(например, выгоду покупки среди акций)
+          можно провести анализ графиков(например, выгоду покупки среди акций).
         </p>
       </section>
       <div class="button-container">
@@ -156,6 +161,7 @@
     </main>
 
     <script>
+      // Code for buttons' pulse animation
       document.querySelector(".btn").addEventListener("mouseover", function () {
         this.classList.add("pulse-animation");
       });
