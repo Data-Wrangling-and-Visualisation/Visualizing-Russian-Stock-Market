@@ -76,20 +76,21 @@ header {
 .period-selector {
     display: flex;
     margin-top: 1rem;
+    gap: 10px; /* Use fixed pixel gap instead of percentage for better control */
+    justify-content:space-around;
 }
 
 .period-btn {
     background-color: #ecf2ed;
     border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
+    padding: 5px 20px;
+    border-radius: 10px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(.25,.8,.25,1);
     font-weight: 700;
     color: #436239;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
     border-radius: 20px;
-    margin-left: 1%;
 }
   
 .period-btn:hover {
@@ -556,13 +557,15 @@ svg {
 
 #main-chart, #volume-chart {
     overflow: visible;
-    width: 100%;
+    width: 98%;
 }
 
 #chart-container {
-    min-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+    display: grid;
+    justify-items: center; /* Centers children horizontally */
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .left-column2.active {

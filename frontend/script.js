@@ -2,7 +2,7 @@
 const config = {
     defaultTicker: 'SBER',
     mainChart: {
-        height: 400,
+        height: 430,
         margin: { top: 40, right: 40, bottom: 30, left: 60 },
         candleWidth: 2
     },
@@ -481,7 +481,7 @@ function createCombinedCharts(data, ticker) {
         console.error("Main container not found!");
         return;
     }
-    const width = container.clientWidth - 20;
+    const width = container.clientWidth - 70;
     
     const mainHeight = config.mainChart.height;
     const volumeHeight = config.volumeChart.height;
@@ -510,75 +510,315 @@ function createCombinedCharts(data, ticker) {
         
         // Добавление подсказок
         addTooltip();
+        
     } catch (error) {
         console.error("Error while creating charts:", error);
     }
 }
 
 function createCandlestickChart(svg, data, width, height, ticker) {
+    // Clear previous elements
     svg.selectAll("*").remove();
-    const company = tickerInfo.filter(d => d.ticker === ticker);
 
-    let xAxis = d3.axisBottom(xMainScale)
-        .tickFormat(d3.timeFormat("%b %Y"))
-        .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right));
-    svg.selectAll(".candle")
+    // Store original scales for zoom reference
+    const xOriginal = xMainScale.copy();
+    const yOriginal = yMainScale.copy();
+
+    // Create clip path to prevent drawing outside chart area
+    svg.append("defs").append("clipPath")
+        .attr("id", "chart-clip")
+        .append("rect")
+        .attr("width", width - config.mainChart.margin.left - config.mainChart.margin.right)
+        .attr("height", height - config.mainChart.margin.top - config.mainChart.margin.bottom)
+        .attr("x", config.mainChart.margin.left)
+        .attr("y", config.mainChart.margin.top);
+
+    // Create chart group with clipping
+    const chartGroup = svg.append("g")
+        .attr("class", "chart-group")
+        .attr("clip-path", "url(#chart-clip)");
+
+    // Create candles
+    const candles = chartGroup.selectAll(".candle")
         .data(data)
-        .enter()
-        .append("g")
+        .enter().append("g")
         .attr("class", "candle")
-        .attr("transform", d => `translate(${xMainScale(d.begin)},0)`)
-        .each(function(d) {
-            const g = d3.select(this);
-            const candleWidth = config.mainChart.candleWidth;
-            const halfWidth = candleWidth / 2;
-            
-            g.append("rect")
-                .attr("x", -halfWidth)
-                .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
-                .attr("width", candleWidth)
-                .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
-                .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
-            
-            g.append("line")
-                .attr("x1", 0)
-                .attr("x2", 0)
-                .attr("y1", yMainScale(d.high))
-                .attr("y2", yMainScale(d.low))
-                .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
-                .attr("stroke-width", 1);
-        });
+        .attr("transform", d => `translate(${xMainScale(d.begin)},0)`);
 
-    svg.append("g")
+    // Draw candle elements
+    candles.each(function(d) {
+        const g = d3.select(this);
+        const candleWidth = config.mainChart.candleWidth;
+        const halfWidth = candleWidth / 2;
+        
+        g.append("rect")
+            .attr("x", -halfWidth)
+            .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
+            .attr("width", candleWidth)
+            .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
+            .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
+        
+        g.append("line")
+            .attr("x1", 0)
+            .attr("x2", 0)
+            .attr("y1", yMainScale(d.high))
+            .attr("y2", yMainScale(d.low))
+            .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
+            .attr("stroke-width", 1);
+    });
+
+    // Create axes groups
+    const xAxis = svg.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${height - config.mainChart.margin.bottom})`)
-        .call(xAxis);
+        .attr("transform", `translate(0,${height - config.mainChart.margin.bottom})`);
 
-    svg.append("g")
+    const yAxis = svg.append("g")
         .attr("class", "y-axis")
-        .attr("transform", `translate(${config.mainChart.margin.left},0)`)
-        .call(d3.axisLeft(yMainScale));
+        .attr("transform", `translate(${config.mainChart.margin.left},0)`);
 
+    // Add chart title
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.mainChart.margin.top / 2 + 12)
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "700")
-        .text(`${`${company[0].name} (${company[0].ticker})`} - Свечной график`);
+        .text(`${ticker} - Свечной график`);
+
+    // Define zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([1, 20])
+        .translateExtent([[0, 0], [width, height]])
+        .on("zoom", (event) => {
+            const newX = event.transform.rescaleX(xOriginal);
+            const newY = event.transform.rescaleY(yOriginal);
+
+            // Update scales
+            xMainScale.domain(newX.domain());
+            yMainScale.domain(newY.domain());
+
+            // Update candles
+            candles.attr("transform", d => `translate(${xMainScale(d.begin)},0)`);
+            candles.selectAll("rect")
+                .attr("y", d => d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
+                .attr("height", d => Math.abs(yMainScale(d.open) - yMainScale(d.close)));
+            
+            candles.selectAll("line")
+                .attr("y1", d => yMainScale(d.high))
+                .attr("y2", d => yMainScale(d.low));
+
+            // Update axes
+            updateAxes();
+        });
+
+    // Apply zoom to the SVG
+    svg.call(zoom);
+
+    // Initial axis rendering
+    updateAxes();
+
+    function updateAxes() {
+        xAxis.call(d3.axisBottom(xMainScale)
+            .tickFormat(d3.timeFormat("%b %Y"))
+            .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right)));
+        
+        yAxis.call(d3.axisLeft(yMainScale));
+    }
+
+    // Add zoom reset button
+    // Replace the existing resetButton code with this enhanced version
+    const resetButton = svg.append("g")
+    .attr("class", "zoom-reset")
+    .attr("transform", `translate(${width - 100},20)`)
+    .style("cursor", "pointer")
+    .on("mouseover", function() {
+        // Hover effects
+        resetButton.select("rect")
+            .attr("fill", "#7a9a7f"); // Darker shade on hover
+        resetButton.select("text")
+            .attr("font-weight", "bold");
+    })
+    .on("mouseout", function() {
+        // Return to normal state
+        resetButton.select("rect")
+            .attr("fill", "#9baf9f"); // Original color
+        resetButton.select("text")
+            .attr("font-weight", "700"); // Original weight
+    })
+    .on("click", resetZoom);
+
+    // Button background
+    resetButton.append("rect")
+    .attr("width", 85)
+    .attr("height", 25)
+    .attr("fill", "#9baf9f")
+    .attr("rx", 10)
+    .attr("stroke", "#7a9a7f") // Border color
+    .attr("stroke-width", 0) // Start with no border
+    .on("mouseover", function() {
+        d3.select(this)
+            .attr("stroke-width", 2); // Show border on hover
+    })
+    .on("mouseout", function() {
+        d3.select(this)
+            .attr("stroke-width", 0); // Hide border
+    });
+
+    // Button text
+    resetButton.append("text")
+    .attr("x", 42)
+    .attr("y", 16)
+    .attr("fill", "white")
+    .attr("text-anchor", "middle")
+    .style("font-size", "10px")
+    .style("font-weight", "700") // Normal weight
+    .style("pointer-events", "none") // Prevent text from blocking mouse events
+    .text("Полный график");
+
+    function resetZoom() {
+        svg.transition()
+            .duration(300)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
+
+    // Add tooltip functionality that works with zoom
+    addTooltipWithZoom(svg, width, height);
+}
+
+function addTooltipWithZoom(svg, width, height) {
+    // Remove existing tooltip elements if any
+    d3.select("#main-chart .chart-tooltip").remove();
+    d3.select("#main-chart svg .tooltip-line").remove();
+    d3.select("#main-chart svg .mouse-tracker").remove();
+
+    const margin = config.mainChart.margin;
+    
+    const tooltip = d3.select("#main-chart")
+        .append("div")
+        .attr("class", "chart-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "#fff")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "4px")
+        .style("padding", "8px 12px")
+        .style("font-size", "12px")
+        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
+        .style("pointer-events", "none")
+        .style("z-index", "10");
+
+    const tooltipLine = svg.append("line")
+        .attr("class", "tooltip-line")
+        .attr("stroke", "#666")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3")
+        .style("opacity", 0);
+
+    const chartArea = {
+        x1: margin.left,
+        x2: width - margin.right,
+        y1: margin.top,
+        y2: height - margin.bottom
+    };
+
+    // Create mouse tracking area that works with zoom
+    const tracker = svg.append("rect")
+        .attr("class", "mouse-tracker")
+        .attr("x", chartArea.x1)
+        .attr("y", chartArea.y1)
+        .attr("width", chartArea.x2 - chartArea.x1)
+        .attr("height", chartArea.y2 - chartArea.y1)
+        .style("opacity", 0)
+        .style("pointer-events", "all")
+        .on("mouseover", function() {
+            tooltip.style("visibility", "visible");
+            tooltipLine.style("opacity", 1);
+        })
+        .on("mousemove", function(event) {
+            if (window.isDragging) return;
+            
+            // Get mouse position relative to the SVG
+            const [x, y] = d3.pointer(event, this);
+            
+            // Convert to data coordinates using the current zoom scale
+            const date = xMainScale.invert(x);
+            
+            // Find nearest candle
+            const bisect = d3.bisector(d => d.begin).left;
+            const idx = bisect(filteredData, date, 1);
+            const d = filteredData[idx - 1] || filteredData[idx];
+            
+            if (!d) return;
+            
+            // Highlight candle
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+            
+            d3.selectAll(".candle")
+                .filter(candle => candle.begin.getTime() === d.begin.getTime())
+                .select("rect")
+                .style("stroke", "#000")
+                .style("stroke-width", "1px");
+
+            // Update tooltip line
+            const xPos = xMainScale(d.begin);
+            tooltipLine
+                .attr("x1", xPos)
+                .attr("x2", xPos)
+                .attr("y1", 0)
+                .attr("y2", height);
+
+            // Update tooltip content and position
+            tooltip.html(`
+                <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                <div style="margin-top: 6px;">
+                    <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                    <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                    <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                    <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                    <div>Объем: <strong>${d.volume.toLocaleString()}</strong></div>
+                </div>
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+        })
+        .on("mouseout", function() {
+            tooltip.style("visibility", "hidden");
+            tooltipLine.style("opacity", 0);
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+        });
 }
 
 function createVolumeChart(svg, data, width, height) {
     svg.selectAll("*").remove();
     
-    // Определяем, какие данные использовать (volume для акций, value для индексов)
     const volumeData = data.map(d => ({
         begin: d.begin,
-        volumeValue: d.volume || d.value || 0, // Используем volume, если есть, иначе value
-        isIndex: !d.volume && d.value // Флаг для индексов
+        volumeValue: d.volume || d.value || 0,
+        isIndex: !d.volume && d.value
     }));
 
-    svg.selectAll(".volume-bar")
+    // Create clip path to prevent drawing outside chart area
+    svg.append("defs").append("clipPath")
+        .attr("id", "volume-clip")
+        .append("rect")
+        .attr("width", width - config.volumeChart.margin.left - config.volumeChart.margin.right)
+        .attr("height", height - config.volumeChart.margin.top - config.volumeChart.margin.bottom)
+        .attr("x", config.volumeChart.margin.left)
+        .attr("y", config.volumeChart.margin.top);
+
+    // Create chart group with clipping
+    const chartGroup = svg.append("g")
+        .attr("class", "volume-group")
+        .attr("clip-path", "url(#volume-clip)");
+
+    // Store original scales
+    const xOriginal = xVolumeScale.copy();
+    const yOriginal = yVolumeScale.copy();
+
+    // Create volume bars
+    const bars = chartGroup.selectAll(".volume-bar")
         .data(volumeData)
         .enter()
         .append("rect")
@@ -587,26 +827,100 @@ function createVolumeChart(svg, data, width, height) {
         .attr("y", d => yVolumeScale(d.volumeValue))
         .attr("width", config.mainChart.candleWidth)
         .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volumeValue))
-        .attr("fill", d => d.isIndex ? "#6a5acd" : "#4285f4"); // Разные цвета для индексов и акций
+        .attr("fill", d => d.isIndex ? "#6a5acd" : "#4285f4");
 
-    // Оси
-    svg.append("g")
+    // Create axes
+    const xAxis = svg.append("g")
         .attr("class", "x-axis")
         .attr("transform", `translate(0,${height - config.volumeChart.margin.bottom})`)
         .call(d3.axisBottom(xVolumeScale));
 
-    svg.append("g")
+    const yAxis = svg.append("g")
         .attr("class", "y-axis")
         .attr("transform", `translate(${config.volumeChart.margin.left},0)`)
         .call(d3.axisLeft(yVolumeScale).ticks(7));
 
-    // Заголовок с учетом типа данных
+    // Add title
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.volumeChart.margin.top - 10)
         .attr("class", "volume-title")
         .style("font-size", "14px")
         .text(volumeData.some(d => d.isIndex) ? "Стоимость торгов" : "Объем торгов");
+
+    // Add zoom behavior
+    const zoom = d3.zoom()
+        .scaleExtent([1, 100])
+        .translateExtent([[0, 0], [width, height]])
+        .on("zoom", zoomed);
+
+    svg.call(zoom);
+
+    function zoomed(event) {
+        // Update x-scale
+        const newX = event.transform.rescaleX(xOriginal);
+        xVolumeScale.domain(newX.domain());
+
+        // Update y-scale based on visible data
+        const visibleData = volumeData.filter(d => 
+            d.begin >= xVolumeScale.domain()[0] && 
+            d.begin <= xVolumeScale.domain()[1]
+        );
+
+        if (visibleData.length > 0) {
+            const maxVolume = d3.max(visibleData, d => d.volumeValue);
+            yVolumeScale.domain([0, maxVolume * 1.1]);
+        }
+
+        updateChart();
+    }
+
+    function updateChart() {
+        // Calculate dynamic bar width based on zoom level
+        const barWidth = Math.max(
+            1, // Minimum width
+            (xVolumeScale(xVolumeScale.domain()[1]) - xVolumeScale(xVolumeScale.domain()[0])) / 
+            volumeData.length * 0.8
+        );
+
+        // Update bars
+        bars.attr("x", d => xVolumeScale(d.begin) - barWidth/2)
+            .attr("width", barWidth)
+            .attr("y", d => yVolumeScale(d.volumeValue))
+            .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volumeValue));
+
+        // Update axes
+        xAxis.call(d3.axisBottom(xVolumeScale));
+        yAxis.call(d3.axisLeft(yVolumeScale).ticks(5));
+    }
+
+    // Add reset zoom button
+    const resetButton = svg.append("g")
+        .attr("class", "zoom-reset")
+        .attr("transform", `translate(${width - 100},20)`)
+        .style("cursor", "pointer")
+        .on("click", resetZoom);
+
+    resetButton.append("rect")
+        .attr("width", 85)
+        .attr("height", 25)
+        .attr("fill", "#9baf9f")
+        .attr("rx", 10);
+
+    resetButton.append("text")
+        .attr("x", 42)
+        .attr("y", 16)
+        .attr("fill", "white")
+        .attr("text-anchor", "middle")
+        .style("font-size", "10px")
+        .style("font-weight", "700")
+        .text("Полный график");
+
+    function resetZoom() {
+        svg.transition()
+            .duration(300)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
 }
 
 function addInfo(type, tickerName) {
@@ -1244,7 +1558,7 @@ function updateChartsWithData(data) {
     const container = document.getElementById('chart-container');
     if (!container) return;
     
-    const width = container.clientWidth - 20;
+    const width = container.clientWidth - 70;
     const mainHeight = config.mainChart.height;
     const volumeHeight = config.volumeChart.height;
     
