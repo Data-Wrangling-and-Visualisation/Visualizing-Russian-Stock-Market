@@ -1,9 +1,11 @@
+//general constants
 const width = 1300,
   height = 500,
   margin = { top: 20, right: 30, bottom: 50, left: 50 };
 const innerWidth = width - margin.left - margin.right;
 const innerHeight = height - margin.top - margin.bottom;
 
+//creating an SVG container
 const svg = d3
   .select("#chart")
   .append("svg")
@@ -19,6 +21,7 @@ const tooltip = d3
   .attr("class", "tooltip")
   .style("opacity", 0);
 
+//Initializing scales for the X and Y axes
 let x = d3.scaleTime().range([0, innerWidth]);
 let y = d3.scaleLinear().range([innerHeight, 0]);
 
@@ -34,6 +37,7 @@ let stockData = {};
 let indexNamesMap = {};
 let stockNamesMap = {};
 
+//Downloading data from the server and preparing it
 Promise.all([
   fetch("http://localhost:5500/api/data/index").then((response) =>
     response.json()
@@ -61,11 +65,11 @@ Promise.all([
           data.name,
         ])
       );
-
       stockNamesMap = Object.fromEntries(
         Object.entries(tickerDictionary).map(([name, ticker]) => [ticker, name])
       );
 
+      //Converting index and stock data into a convenient format
       indexData = indexDataResponse.reduce((acc, d) => {
         const index = d.INDEX_TICK;
         if (!acc[index]) acc[index] = [];
@@ -73,6 +77,7 @@ Promise.all([
         return acc;
       }, {});
 
+      //Similar for these stocks
       stockData = stockDataResponse.reduce((acc, d) => {
         const stock = d.STOCK_TICK;
         if (!acc[stock]) acc[stock] = [];
@@ -86,6 +91,7 @@ Promise.all([
   )
   .catch((err) => console.error(err));
 
+//function for geting displaying names of index and stock
 function getDisplayName(ticker, isStock = false) {
   if (isStock) {
     return stockNamesMap[ticker] || ticker;
@@ -93,6 +99,7 @@ function getDisplayName(ticker, isStock = false) {
   return indexNamesMap[ticker] || ticker;
 }
 
+//Function for filling drop-down lists
 function populateSelectors(indexNames, stockNames) {
   const index1 = document.getElementById("index1");
   const index2 = document.getElementById("index2");
@@ -132,7 +139,7 @@ function populateSelectors(indexNames, stockNames) {
     stock2.selectedIndex = 1;
   }
 }
-
+//function for a warning to appear from above
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.textContent = message;
@@ -142,12 +149,13 @@ function showToast(message) {
     toast.classList.remove("show");
   }, 2000);
 }
-
+//The main function of updating the graph
 function updateChart() {
   const comparisonMode = document.querySelector(
     ".comparison-mode button.active"
   ).id;
 
+  //receive data for comparison depending on the mode
   let data1, data2, label1, label2, firstType, secondType;
 
   if (comparisonMode === "compareIndices") {
@@ -181,16 +189,18 @@ function updateChart() {
     label2 = mixed2;
   }
 
+  //checking that the data has been uploaded
   if (!data1 || !data2) {
     alert("Не удалось загрузить данные для сравнения");
     return;
   }
-
+  //checking that the data for comparision is different
   if (label1 === label2 && firstType === secondType) {
     showToast("Выберите разные данные для сравнения");
     return;
   }
 
+  //Data processing: removing duplicates, sorting by date
   const unique = (arr) =>
     Array.from(
       new Map(arr.map((item) => [item.date.toISOString(), item])).values()
@@ -218,6 +228,7 @@ function updateChart() {
     return;
   }
 
+  //conversion to a percentage change from the initial value
   const normalized1 = processedData1.map((d) => ({
     date: d.date,
     value: (d.value / base1 - 1) * 100,
@@ -253,6 +264,7 @@ function updateChart() {
   svg.selectAll(".legend").remove();
   svg.selectAll(".dot").remove();
 
+  //drawing lines on a graph
   const line = d3
     .line()
     .defined((d) => d.value != null)
@@ -284,12 +296,13 @@ function updateChart() {
     .attr("class", "legend")
     .attr("transform", `translate(${innerWidth - 150}, 20)`);
 
+  //function for long name for display on graph
   function shortenName(name, maxLength = 15) {
     return name.length > maxLength
       ? name.substring(0, maxLength) + "..."
       : name;
   }
-
+  //adding legends
   legend
     .append("rect")
     .attr("x", 0)
@@ -328,6 +341,7 @@ function updateChart() {
     .attr("y", 30)
     .text(shortenName(getDisplayName(label2, isSecondStock)));
 
+  //adding points for interactivity
   const dots1 = svg
     .append("g")
     .attr("class", "dots1")
@@ -356,6 +370,7 @@ function updateChart() {
     .style("opacity", 0)
     .style("pointer-events", "all");
 
+  //Event handlers for tooltips and hover effects
   const showTooltip = (event, d) => {
     const isStockTooltip = d.label === label2 ? isSecondStock : isFirstStock;
 
@@ -419,6 +434,7 @@ document.getElementById("indicesComparison").style.display = "block";
 document.getElementById("stocksComparison").style.display = "none";
 document.getElementById("mixedComparison").style.display = "none";
 
+//Event handlers for switching comparison modes
 document
   .getElementById("compareIndices")
   .addEventListener("click", function () {
