@@ -40,13 +40,11 @@ The repository is organized as follows:
 
 ## Sample Visualizations
 
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img2.png)
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img3.png)
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img4.png)
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img5.png)
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img6.png)
-![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img7.png)
-![compare index](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/assets/img1.png)
+![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/test_project/frontend/images/img1.png)
+![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/test_project/frontend/images/img2.png)
+![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/test_project/frontend/images/img4.png)
+![main page](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/test_project/frontend/images/img5.png)
+![compare index](https://github.com/Data-Wrangling-and-Visualisation/Visualizing-Russian-Stock-Market/blob/test_project/frontend/images/img6.png)
 
 ---
 
