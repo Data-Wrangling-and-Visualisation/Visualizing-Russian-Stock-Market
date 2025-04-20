@@ -13,8 +13,8 @@ body {
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   background-color: white;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  width: 90%;
-  margin-left: 5%;
+  width: 95%;
+  margin-left: 2.5%;
   margin-top: 2%;
   margin-bottom: 4%;
 }
@@ -231,6 +231,13 @@ select {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
+  appearance: none;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235f6368'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 
@@ -285,7 +292,7 @@ select {
 
 .toast-notification {
   position: fixed;
-  top: 20px;
+  top: 10%;
   left: 50%;
   transform: translateX(-50%);
   background-color: #c62f2d;

@@ -22,41 +22,23 @@
         <div id="main-chart" class="main-chart-style"></div>
         <div id="volume-chart"></div>
       </div>
-      <div class="dividends_info">
-        <div class="left-column">
+      
+      <div class="dividends_info" id="stock-view">
+        <!-- Stock View (left-column) -->
+        <div class="left-column active" id="stock-column">
           <div id="company_info_stocks" class="info"></div>
           <div id="additional_content" class="info"></div>
         </div>
+        
+        <!-- Index View (left-column2) -->
+        <div class="left-column2" id="index-column">
+          <div id="company_info_other" class="info"></div>
+          <div id="pie-chart" class="structure-chart"></div>
+        </div>
+        
+        <!-- Common Elements -->
         <div id="open-price-chart-container" class="small-chart-style"></div>
-      </div>
-
-      <div class="index-structure-container">
-        <h2 style="margin-left: 2%">Данные по индексам MOEX</h2>
-        <div class="index-selector">
-          <label for="index-select" style="margin-left: 2%"
-            >Выберите индекс:
-          </label>
-          <select id="index-select">
-            <option value="IMOEX">IMOEX</option>
-            <option value="IMOEX2">IMOEX2</option>
-            <option value="RTSI">RTSI</option>
-            <option value="IMOEXCNY">IMOEXCNY</option>
-            <option value="MOEXBC">MOEXBC</option>
-            <option value="MOEXOG">MOEXOG</option>
-            <option value="MOEXEU">MOEXEU</option>
-            <option value="MOEXTL">MOEXTL</option>
-            <option value="MOEXMM">MOEXMM</option>
-            <option value="MOEXFN">MOEXFN</option>
-          </select>
-        </div>
-        <div class="structure-charts">
-          <div class="left-column2">
-            <div id="company_info_other" class="info"></div>
-            <div id="pie-chart" class="structure-chart bottom-chart"></div>
-          </div>
-          <div id="open-price-chart-container" class="small-chart-style"></div>
-          <div id="bar-chart" class="structure-chart"></div>
-        </div>
+        <div id="bar-chart" class="structure-chart"></div>
       </div>
 
     </main>

@@ -48,8 +48,7 @@ async function initApp() {
     addTooltip();
     createDividend(filter_dividends);
     createOpenPriceChart(currentTicker);
-    setupPeriodButtons();
-    updateStructureCharts();  
+    setupPeriodButtons(); 
 }
 
 
@@ -65,9 +64,9 @@ async function loadData(ticker) {
         allDataIndex = originalData2.filter(item => item.INDEX_TICK === ticker && item.period === 'D')
                             .map(item => ({
                                 ...item,
-                                begin: new Date(item.begin),
-                                type: item.close >= item.open ? 'bullish' : 'bearish'
+                                begin: new Date(item.begin)
                             }));
+        console.log(originalData2)
         filteredData = [...allData];
         const divData = await fetchData('dividend');
         dividends = divData.filter(item => item.DIV_TICK === ticker);
@@ -209,7 +208,6 @@ function searchTicker() {
     // 4. Проверяем частичные совпадения с названиями индексов
     const foundIndexName = Object.entries(IndexMap).find(([ticker, name]) => 
         name.toUpperCase().includes(upperInput)
-        
     );
 
     if (foundTicker) {
@@ -218,18 +216,20 @@ function searchTicker() {
             addTooltip();
             createDividend(filter_dividends);
             createOpenPriceChart(foundTicker);
+            showRelevantView("stocks");
         });
         return;
     }
     else if (foundIndexTicker) {
-        currentTicker = foundIndexTicker;
-        loadData(foundIndexTicker).then(() => {
+        currentTicker = IndexMap[foundIndexTicker];
+        loadData(currentTicker).then(() => {
             d3.select("#main-chart").html("");
             d3.select("#volume-chart").html("");
-            createCombinedCharts(filteredData, foundIndexTicker);
+            createCombinedCharts(filteredData, currentTicker);
             addTooltip();
-            createOpenPriceChart(foundIndexTicker);
-            updateStructureCharts();
+            createOpenPriceChart(currentTicker);
+            showRelevantView("indexes");
+            updateStructureCharts(currentTicker);
         });
         return;
     }
@@ -240,10 +240,12 @@ function searchTicker() {
             addTooltip();
             createDividend(filter_dividends);
             createOpenPriceChart(ticker);
+            showRelevantView("stocks");
         });
     }
     else if (foundIndexName) {
-        const [ticker] = foundIndexName;
+        const ticker = foundIndexName[1];
+        console.log(ticker)
         currentTicker = ticker;
         loadData(ticker).then(() => {
             d3.select("#main-chart").html("");
@@ -251,11 +253,12 @@ function searchTicker() {
             createCombinedCharts(filteredData, ticker);
             addTooltip();
             createOpenPriceChart(ticker);
-            updateStructureCharts();
+            showRelevantView("indexes");
+            updateStructureCharts(ticker);
         });
     }
     else {
-        alert("Тикер не найден! Проверьте название или тикер.");
+        showToast("К сожалению, тикер с таким названием не был найден");
     }
 }
 
@@ -717,8 +720,8 @@ function createDividend(data) {
     }
 }
 
-function updateStructureCharts() {
-    const selectedIndex = document.getElementById("index-select").value;
+function updateStructureCharts(chosenVal) {
+    const selectedIndex = chosenVal.toUpperCase();
     const tickerData = processTickerData(selectedIndex);
     const sectorData = processSectorData(selectedIndex);
     
@@ -1004,8 +1007,6 @@ const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-document.getElementById("index-select").addEventListener("change", updateStructureCharts);
-
 function updateMainChart(filteredData) {
     this.filteredData = filteredData;
 
@@ -1148,6 +1149,7 @@ function createOpenPriceChart(tickerName) {
         ...tickerData.map(item => ({ ...item, dataType: 'stock' })),
         ...indData.map(item => ({ ...item, dataType: 'index' }))
       ];
+    console.log(indData)
 
     const mainContainer = d3.select("#open-price-chart-container");
     mainContainer.selectAll("*").remove();
@@ -1225,7 +1227,7 @@ function createOpenPriceChart(tickerName) {
     let currentPeriod = "5y";
 
     const width = container.node().getBoundingClientRect().width/1.22
-    const height = 370;
+    const height = 360;
     const margin = {top: 25, bottom: 0, left: 80};
     const innerWidth = width;
     const innerHeight = height;
@@ -1596,3 +1598,33 @@ function showToast(message) {
       toast.classList.remove("show");
     }, 2000);
   }
+
+function showRelevantView(searchInput) {
+
+    const stockView = document.getElementById('stock-column');
+    const indexView = document.getElementById('index-column');
+    const barChart = document.getElementById('bar-chart');
+    const container = document.getElementById('stock-view');
+  
+    // Reset all views
+    stockView.classList.remove('active');
+    indexView.classList.remove('active');
+    container.classList.remove('index-view-active');
+
+    let isStock, isIndex;
+    if (searchInput == "stocks") {
+        isStock = true;
+    } else if (searchInput == "indexes") {
+        isIndex = true;
+    }
+
+    // Show the relevant view
+    if (isStock) {
+        stockView.classList.add('active');
+    } else if (isIndex) {
+        indexView.classList.add('active');
+        container.classList.add('index-view-active'); // Enable bar-chart
+    }
+
+    document.getElementById('open-price-chart-container').style.display = 'flex';
+}
