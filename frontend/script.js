@@ -1230,36 +1230,48 @@ function filterDataByPeriod(period) {
             filtered = Data_i.filter(d => d.begin >= yearAgo);
         }
     }
-    
+    addTooltip();
     updateChartsWithData(filtered);
 }
 
 function updateChartsWithData(data) {
-    // Подготовка данных
+    if (!data || data.length === 0) return;
+    
+    // Обновляем данные
     filteredData = prepareData(data);
-    if (filteredData.length === 0) return;
-
-    // Обновление шкал и графиков
+    
+    // Получаем актуальные размеры
     const container = document.getElementById('chart-container');
+    if (!container) return;
+    
     const width = container.clientWidth - 20;
     const mainHeight = config.mainChart.height;
     const volumeHeight = config.volumeChart.height;
     
+    // Обновляем шкалы
     setupScales(filteredData, width, mainHeight, volumeHeight);
-    updateCandles();
-    updateVolumes();
     
-    // Переинициализация tooltip после обновления данных
-    reinitializeTooltip();
-}
-
-function reinitializeTooltip() {
-    // Удаляем старый tooltip
-    d3.select("#main-chart .chart-tooltip").remove();
-    d3.select("#main-chart svg .tooltip-line").remove();
-    d3.select("#main-chart svg .mouse-tracker").remove();
+    // Полностью пересоздаем графики
+    d3.select("#main-chart svg").remove();
+    d3.select("#volume-chart svg").remove();
     
-    // Создаем новый tooltip
+    const mainSvg = d3.select("#main-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", mainHeight);
+        
+    const volumeSvg = d3.select("#volume-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", volumeHeight);
+    
+    createCandlestickChart(mainSvg, filteredData, width, mainHeight, currentTicker);
+    createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
+    addTooltip();
+    // Обновляем brush если есть
+    if (brush) {
+        d3.select("#volume-chart svg .brush").call(brush.move, null);
+    }
     addTooltip();
 }
 
