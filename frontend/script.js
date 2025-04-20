@@ -7,8 +7,8 @@ const config = {
         candleWidth: 2
     },
     volumeChart: {
-        height: 150,
-        margin: { top: 30, right: 40, bottom: 40, left: 80 }
+        height: 180,
+        margin: { top: 30, right: 40, bottom: 40, left: 90 }
     },
     structureCharts: {
         width: 500,
@@ -20,7 +20,6 @@ const config = {
 let allData = [];
 let allDataIndex = [];
 let filteredData = [];
-let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
@@ -30,6 +29,8 @@ let moexData = {
     composition: {},
     sectors: {}
 };
+
+let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 const INDEX_TICKERS = ['IMOEX', 'IMOEX2', 'RTSI', 'IMOEXCNY', 'MOEXBC', 'MOEXOG', 'MOEXEU', 'MOEXTL', 'MOEXMM', 'MOEXFN'];
 let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 let structureTooltip = d3.select("body").append("div")
@@ -64,10 +65,15 @@ async function loadData(ticker) {
         allDataIndex = originalData2.filter(item => item.INDEX_TICK === ticker && item.period === 'D')
                             .map(item => ({
                                 ...item,
-                                begin: new Date(item.begin)
+                                begin: new Date(item.begin),
+                                type: item.close >= item.open ? 'bullish' : 'bearish'
                             }));
         console.log(originalData2)
         filteredData = [...allData];
+        if (allData.length ===0){
+            filteredData = [... prepareData(allDataIndex)]
+        }
+        filterIndex = [... prepareData(allDataIndex)]
         const divData = await fetchData('dividend');
         dividends = divData.filter(item => item.DIV_TICK === ticker);
         filter_dividends = [...dividends];
@@ -190,22 +196,18 @@ function searchTicker() {
 
     const upperInput = input.toUpperCase();
 
-    // 1. Проверяем точные совпадения с тикерами акций
     const foundTicker = Object.values(tickerMap).find(ticker => 
         ticker.toUpperCase() === upperInput
     );
 
-    // 2. Проверяем точные совпадения с тикерами индексов
     const foundIndexTicker = Object.keys(IndexMap).find(ticker =>
         ticker.toUpperCase() === upperInput
     );
 
-    // 3. Проверяем частичные совпадения с названиями компаний
     const foundCompany = Object.keys(tickerMap).find(company => 
         company.toUpperCase().includes(upperInput)
     );
 
-    // 4. Проверяем частичные совпадения с названиями индексов
     const foundIndexName = Object.entries(IndexMap).find(([ticker, name]) => 
         name.toUpperCase().includes(upperInput)
     );
@@ -225,7 +227,7 @@ function searchTicker() {
         loadData(currentTicker).then(() => {
             d3.select("#main-chart").html("");
             d3.select("#volume-chart").html("");
-            createCombinedCharts(filteredData, currentTicker);
+            createCombinedCharts(filterIndex, currentTicker);
             addTooltip();
             createOpenPriceChart(currentTicker);
             showRelevantView("indexes");
@@ -250,7 +252,7 @@ function searchTicker() {
         loadData(ticker).then(() => {
             d3.select("#main-chart").html("");
             d3.select("#volume-chart").html("");
-            createCombinedCharts(filteredData, ticker);
+            createCombinedCharts(filterIndex, ticker);
             addTooltip();
             createOpenPriceChart(ticker);
             showRelevantView("indexes");
@@ -262,22 +264,67 @@ function searchTicker() {
     }
 }
 
+function prepareData(data) {
+    if (!Array.isArray(data)) {
+        console.error("Invalid data format - expected array!");
+        return [];
+    }
+
+    return data.map(d => {
+        try {
+            const beginDate = new Date(d.begin);
+            if (isNaN(beginDate.getTime())) {
+                console.warn("Invalid date:", d.begin);
+                return null;
+            }
+
+            return {
+                begin: beginDate,
+                open: +d.open || 0,
+                close: +d.close || 0,
+                high: +d.high || 0,
+                low: +d.low || 0,
+                volume: +d.volume || 0,
+                value: +d.value || 0,
+                type: (+d.close || 0) >= (+d.open || 0) ? 'bullish' : 'bearish',
+                ticker: d.STOCK_TICK || d.INDEX_TICK || 'UNKNOWN'
+            };
+        } catch (error) {
+            console.error("Error processing data item:", d, error);
+            return null;
+        }
+    }).filter(item => item !== null);
+}
+
 function setupScales(data, width, mainHeight, volumeHeight) {
+    if (!data || data.length === 0) return;
+    
+    const mainMargin = config.mainChart.margin;
+    const volumeMargin = config.volumeChart.margin;
+    
+    const dateExtent = d3.extent(data, d => d.begin);
     xMainScale = d3.scaleTime()
-        .domain(d3.extent(data, d => d.begin))
-        .range([config.mainChart.margin.left, width - config.mainChart.margin.right]);
-
-    yMainScale = d3.scaleLinear()
-        .domain([d3.min(data, d => d.low) * 0.99, d3.max(data, d => d.high) * 1.01])
-        .range([mainHeight - config.mainChart.margin.bottom, config.mainChart.margin.top]);
-
+        .domain(dateExtent)
+        .range([mainMargin.left, width - mainMargin.right]);
+    
     xVolumeScale = d3.scaleTime()
-        .domain(xMainScale.domain())
-        .range([config.volumeChart.margin.left, width - config.volumeChart.margin.right]);
+        .domain(dateExtent)
+        .range([volumeMargin.left, width - volumeMargin.right]);
 
+    const pricePadding = 0.01;
+    const priceExtent = [
+        d3.min(data, d => d.low) * (1 - pricePadding),
+        d3.max(data, d => d.high) * (1 + pricePadding)
+    ];
+    yMainScale = d3.scaleLinear()
+        .domain(priceExtent)
+        .range([mainHeight - mainMargin.bottom, mainMargin.top]);
+
+    const maxVolumeValue = d3.max(data, d => d.volume || d.value || 0);
+    const volumePadding = 0.1;
     yVolumeScale = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.volume)])
-        .range([volumeHeight - config.volumeChart.margin.bottom, config.volumeChart.margin.top]);
+        .domain([0, maxVolumeValue * (1 + volumePadding)])
+        .range([volumeHeight - volumeMargin.bottom, volumeMargin.top]);
 }
 
 function adjustXTicks(scale, width) {
@@ -303,7 +350,6 @@ function adjustXTicks(scale, width) {
 }
 
 function addTooltip() {
-    // Очищаем предыдущие элементы tooltip
     d3.select("#main-chart .chart-tooltip").remove();
     d3.select("#main-chart svg .tooltip-line").remove();
     d3.select("#main-chart svg .mouse-tracker").remove();
@@ -313,7 +359,6 @@ function addTooltip() {
     const width = +svg.attr("width");
     const height = +svg.attr("height");
     
-    // Создаем tooltip в старом стиле
     const tooltip = d3.select("#main-chart")
         .append("div")
         .attr("class", "chart-tooltip")
@@ -328,7 +373,6 @@ function addTooltip() {
         .style("pointer-events", "none")
         .style("z-index", "10");
 
-    // Вертикальная линия (старый стиль)
     const tooltipLine = svg.append("line")
         .attr("class", "tooltip-line")
         .attr("stroke", "#666")
@@ -336,7 +380,6 @@ function addTooltip() {
         .attr("stroke-dasharray", "3,3")
         .style("opacity", 0);
 
-    // Ограничиваем область действия только графиком свечей
     const chartArea = {
         x1: margin.left,
         x2: width - margin.right,
@@ -344,7 +387,6 @@ function addTooltip() {
         y2: height - margin.bottom
     };
 
-    // Область отслеживания (только в пределах графика свечей)
     svg.append("rect")
         .attr("class", "mouse-tracker")
         .attr("x", chartArea.x1)
@@ -412,31 +454,70 @@ function addTooltip() {
 }
 
 function createCombinedCharts(data, ticker) {
-    const containerWidth = document.getElementById('chart-container').clientWidth;
-    const width = containerWidth - 20;
-    const mainHeight = config.mainChart.height + 50;
+    // Проверка наличия данных
+    if (!data || data.length === 0) {
+        console.error("No data provided to create charts!");
+        return;
+    }
+
+    // Подготовка данных
+    filteredData = prepareData(data);
+    if (filteredData.length === 0) {
+        console.error("Failed to prepare data for charts!");
+        return;
+    }
+
+    // Проверка наличия контейнеров
+    const mainChartContainer = document.getElementById('main-chart');
+    const volumeChartContainer = document.getElementById('volume-chart');
+    if (!mainChartContainer || !volumeChartContainer) {
+        console.error("Chart containers not found!");
+        return;
+    }
+
+    // Получение ширины контейнера с проверкой
+    const container = document.getElementById('chart-container');
+    if (!container) {
+        console.error("Main container not found!");
+        return;
+    }
+    const width = container.clientWidth - 20;
+    
+    const mainHeight = config.mainChart.height;
     const volumeHeight = config.volumeChart.height;
 
+    // Очистка предыдущих графиков
     d3.select("#main-chart").html("");
     d3.select("#volume-chart").html("");
 
-    const mainSvg = d3.select("#main-chart")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", mainHeight);
+    // Создание SVG элементов с проверкой
+    try {
+        const mainSvg = d3.select("#main-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", mainHeight);
+        const volumeSvg = d3.select("#volume-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", volumeHeight);
 
-    const volumeSvg = d3.select("#volume-chart")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", volumeHeight);
-
-    setupScales(data, width, mainHeight, volumeHeight);
-    createCandlestickChart(mainSvg, data, width, mainHeight, ticker);
-    createVolumeChart(volumeSvg, data, width, volumeHeight);
+        // Настройка шкал
+        setupScales(filteredData, width, mainHeight, volumeHeight);
+        
+        // Создание графиков
+        createCandlestickChart(mainSvg, filteredData, width, mainHeight, ticker);
+        createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
+        
+        // Добавление подсказок
+        addTooltip();
+    } catch (error) {
+        console.error("Error while creating charts:", error);
+    }
 }
 
 function createCandlestickChart(svg, data, width, height, ticker) {
     svg.selectAll("*").remove();
+    const company = tickerInfo.filter(d => d.ticker === ticker);
 
     let xAxis = d3.axisBottom(xMainScale)
         .tickFormat(d3.timeFormat("%b %Y"))
@@ -484,26 +565,31 @@ function createCandlestickChart(svg, data, width, height, ticker) {
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "700")
-        .text(`${ticker} - Свечной график`);
+        .text(`${`${company[0].name} (${company[0].ticker})`} - Свечной график`);
 }
 
 function createVolumeChart(svg, data, width, height) {
     svg.selectAll("*").remove();
-    const x = d3.scaleBand()
-    .domain(data.map(d => d.category))
-    .range([0, width])
-    .padding(0.2);
+    
+    // Определяем, какие данные использовать (volume для акций, value для индексов)
+    const volumeData = data.map(d => ({
+        begin: d.begin,
+        volumeValue: d.volume || d.value || 0, // Используем volume, если есть, иначе value
+        isIndex: !d.volume && d.value // Флаг для индексов
+    }));
+
     svg.selectAll(".volume-bar")
-        .data(data)
+        .data(volumeData)
         .enter()
         .append("rect")
-        .attr("class", "volume-bar")
+        .attr("class", d => `volume-bar ${d.isIndex ? 'index-volume' : 'stock-volume'}`)
         .attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
-        .attr("y", d => yVolumeScale(d.volume))
+        .attr("y", d => yVolumeScale(d.volumeValue))
         .attr("width", config.mainChart.candleWidth)
-        .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volume))
-        .attr("fill", "#4285f4");
+        .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volumeValue))
+        .attr("fill", d => d.isIndex ? "#6a5acd" : "#4285f4"); // Разные цвета для индексов и акций
 
+    // Оси
     svg.append("g")
         .attr("class", "x-axis")
         .attr("transform", `translate(0,${height - config.volumeChart.margin.bottom})`)
@@ -512,15 +598,15 @@ function createVolumeChart(svg, data, width, height) {
     svg.append("g")
         .attr("class", "y-axis")
         .attr("transform", `translate(${config.volumeChart.margin.left},0)`)
-        .call(d3.axisLeft(yVolumeScale)
-        .ticks(7));
+        .call(d3.axisLeft(yVolumeScale).ticks(7));
 
+    // Заголовок с учетом типа данных
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.volumeChart.margin.top - 10)
         .attr("class", "volume-title")
         .style("font-size", "14px")
-        .text("Объем торгов");
+        .text(volumeData.some(d => d.isIndex) ? "Стоимость торгов" : "Объем торгов");
 }
 
 function addInfo(type, tickerName) {
@@ -1113,8 +1199,8 @@ function setupPeriodButtons() {
 
 function filterDataByPeriod(period) {
     let filtered = [...allData];
+    if (filtered.length !== 0){
     const lastDate = new Date(allData[allData.length - 1].begin);
-    
     if (period === "month") {
         const monthAgo = new Date(lastDate);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
@@ -1125,14 +1211,64 @@ function filterDataByPeriod(period) {
         yearAgo.setFullYear(yearAgo.getFullYear() - 1);
         filtered = allData.filter(d => d.begin >= yearAgo);
     }
+}
+    if (filtered.length === 0){
+        
+        filteredData = [...filterIndex]
+        filteredData = prepareData(filteredData)
+        Data_i = prepareData(allDataIndex)
+        lastDate = new Date(Data_i[Data_i.length - 1].begin);
+        filtered = [...Data_i]
+        if (period === "month") {
+            const monthAgo = new Date(lastDate);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            filtered = Data_i.filter(d => d.begin >= monthAgo);
+        } 
+        else if (period === "year") {
+            const yearAgo = new Date(lastDate);
+            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+            filtered = Data_i.filter(d => d.begin >= yearAgo);
+        }
+    }
     
     updateChartsWithData(filtered);
 }
 
 function updateChartsWithData(data) {
-    filteredData = data;
-    updateMainChart(data);
+    if (!data || data.length === 0) return;
     
+    // Обновляем данные
+    filteredData = prepareData(data);
+    
+    // Получаем актуальные размеры
+    const container = document.getElementById('chart-container');
+    if (!container) return;
+    
+    const width = container.clientWidth - 20;
+    const mainHeight = config.mainChart.height;
+    const volumeHeight = config.volumeChart.height;
+    
+    // Обновляем шкалы
+    setupScales(filteredData, width, mainHeight, volumeHeight);
+    
+    // Полностью пересоздаем графики
+    d3.select("#main-chart svg").remove();
+    d3.select("#volume-chart svg").remove();
+    
+    const mainSvg = d3.select("#main-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", mainHeight);
+        
+    const volumeSvg = d3.select("#volume-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", volumeHeight);
+    
+    createCandlestickChart(mainSvg, filteredData, width, mainHeight, currentTicker);
+    createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
+    
+    // Обновляем brush если есть
     if (brush) {
         d3.select("#volume-chart svg .brush").call(brush.move, null);
     }
