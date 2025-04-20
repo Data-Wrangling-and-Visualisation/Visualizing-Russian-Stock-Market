@@ -31,7 +31,7 @@ The repository is organized as follows:
 ## Technologies Used
 
 - Programming Languages: Python, JavaScript, CSS, HTML.
-- Data Analysis Libraries: Pandas.
+- Data Analysis Libraries: Pandas, Matplot.
 - Visualization Libraries: D3js.
 - Web Frameworks: Flask.
 - Containerization: Docker.
