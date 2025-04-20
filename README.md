@@ -81,10 +81,13 @@ To set up and run the project locally:
 ## Project Status
 
 The project is currently under development.  
-Future updates will include:
+Future work:
 
-- Interactive visualizations,
-- CSS Styling,
-- Fix errors,
+- synchronization with Moscow Exchange,
+- adding forecasts and analysis of securities​,
+- improved usability​,
+- website optimization​,
+- adding user-generated content​,
+- creating topics for discussing individual securities (chat)
 
 ---
