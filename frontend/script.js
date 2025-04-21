@@ -465,7 +465,6 @@ function addTooltip() {
             .style("left", (event.pageX + 10) + "px")
             .style("top", (event.pageY - 10) + "px");
             }else{
-                console.log(d.volume)
                 tooltip.html(`
                     <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
                     <div style="margin-top: 6px;">
