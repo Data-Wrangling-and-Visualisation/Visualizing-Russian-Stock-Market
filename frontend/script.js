@@ -451,7 +451,7 @@ function addTooltip() {
                 .attr("x2", xPos)
                 .attr("y1", 0)
                 .attr("y2", height);
-
+            if (d.volume != 0){
             tooltip.html(`
                 <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
                 <div style="margin-top: 6px;">
@@ -464,6 +464,21 @@ function addTooltip() {
             `)
             .style("left", (event.pageX + 10) + "px")
             .style("top", (event.pageY - 10) + "px");
+            }else{
+                console.log(d.volume)
+                tooltip.html(`
+                    <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                    <div style="margin-top: 6px;">
+                        <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                        <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                        <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                        <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                        <div>Объем в рублях: <strong>${d.value.toLocaleString()}</strong></div>
+                    </div>
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+            }
         })
         .on("mouseout", function() {
             tooltip.style("visibility", "hidden");
@@ -522,9 +537,7 @@ function createCombinedCharts(data, ticker) {
         
         createCandlestickChart(mainSvg, filteredData, width, mainHeight, ticker);
         createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
-        
-        addTooltip();
-        
+        addTooltip(); 
     } catch (error) {
         console.error("Error while creating charts:", error);
     }
@@ -588,14 +601,14 @@ function createCandlestickChart(svg, data, width, height, ticker) {
     const yAxis = svg.append("g")
         .attr("class", "y-axis")
         .attr("transform", `translate(${config.mainChart.margin.left},0)`);
-
+    const company = tickerInfo.filter(d => d.ticker === ticker);
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.mainChart.margin.top / 2 + 12)
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "700")
-        .text(`${ticker} - Свечной график`);
+        .text(`${`${company[0].name} (${company[0].ticker})`} - Свечной график`);
 
     const zoom = d3.zoom()
         .scaleExtent([1, 20])
@@ -1514,6 +1527,7 @@ function updateMainChart(filteredData) {
         .attr("width", config.mainChart.candleWidth)
         .attr("height", d => volumeSvg.attr("height") - config.volumeChart.margin.bottom - yVolumeScale(d.volume))
         .attr("fill", "#4285f4");
+    addTooltip()
 }
 
 //Sets up period filter buttons
