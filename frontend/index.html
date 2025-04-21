@@ -3,58 +3,174 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Анализ фондового рынка</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <link rel="stylesheet" href="style.css" />
+    <title>Аналитика российского рынка | Акции и индексы</title>
+    <meta
+      name="description"
+      content="Глубокий анализ акций российских компаний и рыночных индексов в реальном времени"
+    />
+    <link rel="stylesheet" href="info_compare.css" />
+    <link rel="stylesheet" href="style_info.css" />
   </head>
+  <script>
+    // Simple Intersection Observer implementation for scroll animations
+    document.addEventListener("DOMContentLoaded", function () {
+      const sectionImages = document.querySelectorAll(".section-image");
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add("in-view");
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px",
+          }
+        );
+
+        sectionImages.forEach((image) => {
+          observer.observe(image);
+        });
+      }
+
+      else {
+        sectionImages.forEach((image) => {
+          image.classList.add("in-view");
+        });
+      }
+
+      // Adding smooth scroll behavior for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          document.querySelector(this.getAttribute("href")).scrollIntoView({
+            behavior: "smooth",
+          });
+        });
+      });
+    });
+  </script>
   <body>
     <header>
-      <div class="nav-links">
-        <div class="search-container" id="headerSearch"></div>
-        <a href="index.html" id="homeLink" style="font-weight: 700;">Данные акций и индексов</a>
-        <a href="compare.html" id="compareLink" style="font-weight: 700;">Сравнение акций и индексов</a>
-        <a href="info.html" id="aboutLink" style="font-weight: 700;"> О нас</a>
+      <div class="logo">Российский рынок акций</div>
+      <div class="tagline">
+        Полный анализ акций и индексов Московской биржи с профессиональными
+        инструментами
       </div>
     </header>
 
-    <main id="content">
-      <div id="chart-container">
-        <div id="main-chart"></div>
-        <div id="volume-chart"></div>
-      </div>
-      <div id="additional_content"></div>
+    <main>
+      <section class="intro">
+        <h2>Инвестируйте с уверенностью</h2>
+        <p>
+          Наш сервис предоставляет эксклюзивную аналитику по российскому
+          фондовому рынку, помогая вам принимать обоснованные инвестиционные
+          решения.
+        </p>
+        <p>
+          Опираясь на удобные и собранные в одном месте визуализации основных
+          тенденций, вы сможете быстро и легко анализировать ситуацию на
+          фондовом рынке в сфере акций и индексов.
+        </p>
+      </section>
 
-      <div class="index-structure-container">
-        <h2 style="margin-left: 2%">Данные по индексам MOEX</h2>
-        <div class="index-selector">
-          <label for="index-select" style="margin-left: 2%"
-            >Выберите индекс:
-          </label>
-          <select id="index-select">
-            <option value="IMOEX">IMOEX</option>
-            <option value="IMOEX2">IMOEX2</option>
-            <option value="RTSI">RTSI</option>
-            <option value="IMOEXCNY">IMOEXCNY</option>
-            <option value="MOEXBC">MOEXBC</option>
-            <option value="MOEXOG">MOEXOG</option>
-            <option value="MOEXEU">MOEXEU</option>
-            <option value="MOEXTL">MOEXTL</option>
-            <option value="MOEXMM">MOEXMM</option>
-            <option value="MOEXFN">MOEXFN</option>
-          </select>
+      <section class="feature-card">
+        <h3>Анализ отдельных акций</h3>
+        <p>
+          Получите детальную информацию по акциям российских компаний: Сбербанк,
+          Газпром, Норникель, Лукойл и другие. Мы предоставляем:
+        </p>
+        <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: #555">
+          <li>Интерактивные графики котировок с различными таймфреймами</li>
+          <li>Фундаментальные показатели компаний</li>
+          <li>Анализ дивидендной политики</li>
+        </ul>
+        <div class="section-image">
+          <img src="images/img1.png" alt="Анализ акций" loading="lazy" />
         </div>
-        <div class="structure-charts">
-          <div id="pie-chart" class="structure-chart">
-            <p>Ticker composition will be shown here</p>
-          </div>
-          <div id="bar-chart" class="structure-chart">
-            <p>Sector weights will be shown here</p>
-          </div>
+        <div class="section-image">
+          <img src="images/img2.png" alt="Анализ акций" loading="lazy" />
         </div>
-      </div>
+            <p>Перед вами свечевой график отображающий стоимость ценной бумаги. Каждая свеча имеет тело и тени. Тело является стоимостью в момент 
+              открытия и закрытия  бумаги. Тенями являются минимум и максимум в этом день. По вертикальной оси вы можете увидеть стоимость бумаги за одну штуку, на горизонтальной оси
+               представлена временная ось. Под ним представлен график объёмов, то есть сколько бумаг было куплено и продано в этот день, вертикальная ось.</p>
+               <p>Ниже перед вами представлен график дивидендов, он отражает сколько компания заплатила своим акционерам. 
+                Вертикальная ось показывает сумму выплат, а горизонтальная - временной промежуток.</p>
+                <p>График сбоку - вспомогательный. Он показывает различные типы цен выбранной акции/выбранного индекса в определенный промежуток времени.</p>
+      </section>
 
-      <div id="open-price-chart-container" class="chart-container"></div>
+      <section class="feature-card">
+        <h3>Глубокий анализ индексов</h3>
+        <p>
+          Отслеживайте ключевые индикаторы российского рынка: IMOEX, RTSI,
+          MOEXBC и другие. Наши графики отображают:
+        </p>
+        <ul style="margin-left: 1.5rem; margin-bottom: 1rem; color: #555">
+          <li>
+            Как текущие значения, так и историческую динамику индексов с их
+            основными показателями
+          </li>
+          <li>
+            Составы портфелей с процентным соотношением входящих в них акций
+          </li>
+          <li>Отраслевые структуры индексов</li>
+        </ul>
+        <div class="section-image">
+          <img src="images/img3.png" alt="Сравнение индексов" loading="lazy" />
+        </div>
+        <div class="section-image">
+          <img src="images/img4.png" alt="Сравнение индексов" loading="lazy" />
+        </div>
+        <div class="section-image">
+          <img src="images/img5.png" alt="Сравнение индексов" loading="lazy" />
+        </div>
+        <p>Свечной и вспомогательный графики совпадают по своей функциональности с описанными выше.</p>
+        <p>Круговая и столбчатая диаграммы показывают состав индекса и его отраслевую структуру.</p>
+      </section>
+
+      <section class="feature-card">
+        <h3>Эксклюзивные инструменты</h3>
+        <p>
+          Используйте наши инструменты сравнения индексов и акций для выявления
+          рыночных тенденций.
+        </p>
+        <div class="section-image">
+          <img src="images/img6.png" alt="Инструменты анализа" loading="lazy" />
+        </div>
+        <p>
+          График выше - это интерактивный инструмент для сравнения ценных бумаг с
+          визуализацией их динамики в процентах. Пользователь может выбрать два
+          индекса или акции для сравнения (например, «Индекс МосБиржи» и
+          «М.Видео»). Присутствуют такие опции для сравнения: сравнить 2 индекса
+          между собой, сравнить 2 акции, сравнить индекс и акцию. Ось Y
+          показывает процентное изменение от (от -30% до +60%), а ось X -
+          временной период (2021–2025 гг.). График показывает сравнение по цене
+          закрытия. За 0% берется первое начальное значение в наших данных, а
+          потом показывается измение относительно этой цены. Пользователь
+          выбирает тип сравнения, затем выбирает название индекса/акции. Далее
+          можно провести анализ графиков(например, выгоду покупки среди акций).
+        </p>
+      </section>
+      <div class="button-container">
+        <a href="main.html" class="btn pulse-animation">Начать анализ</a>
+      </div>
     </main>
-    <script src="script.js"></script>
+
+    <script>
+      // Code for buttons' pulse animation
+      document.querySelector(".btn").addEventListener("mouseover", function () {
+        this.classList.add("pulse-animation");
+      });
+
+      document
+        .querySelector(".btn")
+        .addEventListener("animationend", function () {
+          this.classList.remove("pulse-animation");
+        });
+    </script>
   </body>
 </html>

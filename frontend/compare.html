@@ -10,17 +10,20 @@
   <body>
     <header>
       <div class="nav-links">
-        <a href="index.html" id="homeLink" style="font-weight: 700;">Данные акций и индексов</a>
+        <div id="title_page">Сравнение динамики индексов и акций</div>
+        <a href="main.html" id="homeLink" style="font-weight: 700;">Данные акций и индексов</a>
         <a href="compare.html" id="compareLink" style="font-weight: 700;">Сравнение акций и индексов</a>
-        <a href="info.html" id="aboutLink" style="font-weight: 700;"> О нас</a>
+        <a href="index.html" id="aboutLink" style="font-weight: 700;"> О нас</a>
       </div>
     </header>
     <div class="chart-container">
-      <h1>Сравнение динамики индексов и акций</h1>
-      <div class="comparison-mode">
-        <button id="compareIndices" class="active">Сравнить индексы</button>
-        <button id="compareStocks">Сравнить акции</button>
-        <button id="compareMixed">Сравнить индекс и акцию</button>
+      <div class="comparison-mode-container">
+        <div class="comparison-mode">
+          <span class="show-label">Показать:</span>
+          <button id="compareIndices" class="active">Сравнить индексы</button>
+          <button id="compareStocks">Сравнить акции</button>
+          <button id="compareMixed">Сравнить индекс и акцию</button>
+        </div>
       </div>
 
       <div id="indicesComparison">
@@ -62,7 +65,9 @@
         </div>
       </div>
 
-      <div id="chart"></div>
+      <div id="chart-wrapper" style="width: 100%;">
+        <div id="chart"></div>
+      </div>
     </div>
 
     <script src="script_compare.js"></script>

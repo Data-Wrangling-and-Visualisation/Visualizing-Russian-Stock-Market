@@ -1,14 +1,14 @@
-
+//General constants
 const config = {
     defaultTicker: 'SBER',
     mainChart: {
-        height: 400,
+        height: 430,
         margin: { top: 40, right: 40, bottom: 30, left: 60 },
         candleWidth: 2
     },
     volumeChart: {
-        height: 150,
-        margin: { top: 30, right: 40, bottom: 40, left: 80 }
+        height: 180,
+        margin: { top: 30, right: 40, bottom: 40, left: 90 }
     },
     structureCharts: {
         width: 500,
@@ -20,36 +20,43 @@ const config = {
 let allData = [];
 let allDataIndex = [];
 let filteredData = [];
-let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
 let brush;
 let currentTicker = config.defaultTicker;
 let tickerMap = {};
+let tickerInfo = {};
+let IndexMap = {};
 let moexData = {
     composition: {},
     sectors: {}
 };
+
+let xMainScale, yMainScale, xVolumeScale, yVolumeScale;
+const INDEX_TICKERS = ['IMOEX', 'IMOEX2', 'RTSI', 'IMOEXCNY', 'MOEXBC', 'MOEXOG', 'MOEXEU', 'MOEXTL', 'MOEXMM', 'MOEXFN'];
 let colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 let structureTooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 const tickerSets = {
-    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR"],
-    indices: ["IMOEX", "IMOEX2", "RTSI", "IMOEXCNY", "MOEXBC", "MOEXOG",
-        "MOEXEU", "MOEXTL", "MOEXMM", "MOEXFN"]
+    stocks: ["SBER", "GAZP", "GMKN", "MTSS", "RNFT", "LKOH", "PLZL", "VTBR", "IRAO", "TATN"],
+    indices: INDEX_TICKERS
 }
 
+
+//Initializes the application by setting up UI, loading data, and creating charts
 async function initApp() {
     setupUI();
     await loadData(currentTicker);
     await loadIndexData();
     createCombinedCharts(filteredData, currentTicker);
+    addTooltip();
     createDividend(filter_dividends);
     createOpenPriceChart(currentTicker);
-    setupPeriodButtons();
-    updateStructureCharts();  
+    setupPeriodButtons(); 
 }
 
 
+//Loads data for a specific ticker from the server
+//@param {string} ticker - The ticker symbol to load data for
 async function loadData(ticker) {
         const originalData = await fetchData('stock');
         const originalData2 = await fetchData('index');
@@ -65,14 +72,21 @@ async function loadData(ticker) {
                                 begin: new Date(item.begin),
                                 type: item.close >= item.open ? 'bullish' : 'bearish'
                             }));
+
         filteredData = [...allData];
+        if (allData.length ===0){
+            filteredData = [... prepareData(allDataIndex)]
+        }
+        filterIndex = [... prepareData(allDataIndex)]
         const divData = await fetchData('dividend');
         dividends = divData.filter(item => item.DIV_TICK === ticker);
         filter_dividends = [...dividends];
         currentTicker = ticker;
         fetchData('dictionary');
+        fetchData('tickerDescr')
 }
 
+//Loads index composition and sector data from the server
 async function loadIndexData() {
     try {
 
@@ -96,23 +110,30 @@ async function loadIndexData() {
     }
 }
 
-// async function fetchDividendData(){
-//     const response = await fetch(config.dataDividend);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
+//Fetches data from the server based on type
+//@param {string} type - The type of data to fetch ('dictionary', 'tickerDescr', etc.)
+//@returns {Promise} A promise that resolves with the fetched data
 async function fetchData(type) {
     if (type === "dictionary") {
-        fetch('http://localhost:5500/api/data/dictionary')
+        const [tickerResponse, indexResponse] = await Promise.all([
+            fetch('http://localhost:5500/api/data/dictionary'),
+            fetch('http://localhost:5500/api/data/Index_dictionary')
+        ]);
+
+        if (!tickerResponse.ok || !indexResponse.ok) {
+            throw new Error(`HTTP error! Status: ${tickerResponse.status}, ${indexResponse.status}`);
+        }
+
+        tickerMap = await tickerResponse.json();
+        IndexMap = await indexResponse.json();
+
+        initAutocomplete();
+    } else if (type === "tickerDescr") {
+        fetch('http://localhost:5500/api/data/tickerDescr')
         .then(response => response.json())
         .then(data => {
-          tickerMap = data;
-          initAutocomplete();
-        })
-        .catch(error => console.error("Dictionary download error:", error));
+            tickerInfo = data.tickers;
+        });
     } else {
         const response = await fetch(`http://localhost:5500/api/data/${type}`);
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -120,24 +141,7 @@ async function fetchData(type) {
     }
 }
 
-// async function fetchDataIndex() {
-//     const response = await fetch(config.dataIndex);
-//     if (!response.ok) {
-//         throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-//     return await response.json();
-// }
-
-// async function fetchDictionary(){
-//     fetch('tickerDictionary.json')
-// .then(response => response.json())
-// .then(data => {
-//   tickerMap = data;
-//   initAutocomplete();
-// })
-// .catch(error => console.error("Ошибка загрузки словаря:", error));
-// }
-
+//Sets up the user interface including search input and period selector
 function setupUI() {
     const headerSearch = document.getElementById('headerSearch');
     const searchInput = document.createElement("input");
@@ -169,81 +173,183 @@ function setupUI() {
     const periodSelector = document.createElement("div");
     periodSelector.className = "period-selector";
     periodSelector.innerHTML = `
-        <button class="period-btn active" data-period="month">Месяц</button>
+        <button class="period-btn" data-period="month">Месяц</button>
         <button class="period-btn" data-period="year">Год</button>
-        <button class="period-btn" data-period="all">Все данные</button>
+        <button class="period-btn active" data-period="all">Все данные</button>
     `;
     document.getElementById('chart-container').appendChild(periodSelector);
 }
 
+//Initializes the autocomplete functionality for the search input
 function initAutocomplete() {
     const datalist = document.getElementById('tickerSuggestions');
-    
-    const allOptions = [
-      ...Object.keys(tickerMap), 
-      ...Object.values(tickerMap)
-    ];
-  
+    datalist.innerHTML = ''
+    const allOptions = Array.from(
+         new Set([
+             ...Object.keys(tickerMap), 
+             ...Object.values(tickerMap),
+             ...Object.keys(IndexMap), 
+             ...Object.values(IndexMap)
+        ])
+    );
+      
     allOptions.forEach(item => {
       const option = document.createElement('option');
       option.value = item;
       datalist.appendChild(option);
     });
-  }
-
-  function searchTicker() {
-    const input = document.getElementById('tickerInput').value.trim();
-    if (!input) return;
-  
-    const upperInput = input.toUpperCase();
-  
-    const foundTicker = Object.values(tickerMap).find(ticker => 
-      ticker.toUpperCase() === upperInput
-    );
-  
-    if (foundTicker) {
-      loadData(foundTicker).then(() => {
-        createCombinedCharts(filteredData, foundTicker);
-        createDividend(filter_dividends);
-        createOpenPriceChart(foundTicker);
-      });
-      return;
-    }
-  
-    const foundCompany = Object.keys(tickerMap).find(company => 
-      company.toUpperCase().includes(upperInput)
-    );
-  
-    if (foundCompany) {
-      const ticker = tickerMap[foundCompany];
-      loadData(ticker).then(() => {
-        createCombinedCharts(filteredData, ticker);
-        createDividend(filter_dividends);
-        createOpenPriceChart(ticker);
-      });
-    } else {
-      alert("Ничего не найдено! Проверьте название или тикер.");
-    }
-  }
-
-function setupScales(data, width, mainHeight, volumeHeight) {
-    xMainScale = d3.scaleTime()
-        .domain(d3.extent(data, d => d.begin))
-        .range([config.mainChart.margin.left, width - config.mainChart.margin.right]);
-
-    yMainScale = d3.scaleLinear()
-        .domain([d3.min(data, d => d.low) * 0.99, d3.max(data, d => d.high) * 1.01])
-        .range([mainHeight - config.mainChart.margin.bottom, config.mainChart.margin.top]);
-
-    xVolumeScale = d3.scaleTime()
-        .domain(xMainScale.domain())
-        .range([config.volumeChart.margin.left, width - config.volumeChart.margin.right]);
-
-    yVolumeScale = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.volume)])
-        .range([volumeHeight - config.volumeChart.margin.bottom, config.volumeChart.margin.top]);
 }
 
+//Handles the search for a ticker and updates the charts accordingly
+function searchTicker() {
+    const input = document.getElementById('tickerInput').value.trim();
+    if (!input) return;
+
+    const upperInput = input.toUpperCase();
+
+    const foundTicker = Object.values(tickerMap).find(ticker => 
+        ticker.toUpperCase() === upperInput
+    );
+
+    const foundIndexTicker = Object.keys(IndexMap).find(ticker =>
+        ticker.toUpperCase() === upperInput
+    );
+
+    const foundCompany = Object.keys(tickerMap).find(company => 
+        company.toUpperCase().includes(upperInput)
+    );
+
+    const foundIndexName = Object.entries(IndexMap).find(([ticker, name]) => 
+        name.toUpperCase().includes(upperInput)
+    );
+
+    if (foundTicker) {
+        loadData(foundTicker).then(() => {
+            createCombinedCharts(filteredData, foundTicker);
+            addTooltip();
+            createDividend(filter_dividends);
+            createOpenPriceChart(foundTicker);
+            showRelevantView("stocks");
+        });
+        return;
+    }
+    else if (foundIndexTicker) {
+        currentTicker = IndexMap[foundIndexTicker];
+        loadData(currentTicker).then(() => {
+            d3.select("#main-chart").html("");
+            d3.select("#volume-chart").html("");
+            createCombinedCharts(filterIndex, currentTicker);
+            addTooltip();
+            createOpenPriceChart(currentTicker);
+            showRelevantView("indexes");
+            updateStructureCharts(currentTicker);
+        });
+        return;
+    }
+    else if (foundCompany) {
+        const ticker = tickerMap[foundCompany];
+        loadData(ticker).then(() => {
+            createCombinedCharts(filteredData, ticker);
+            addTooltip();
+            createDividend(filter_dividends);
+            createOpenPriceChart(ticker);
+            showRelevantView("stocks");
+        });
+    }
+    else if (foundIndexName) {
+        const ticker = foundIndexName[1];
+        currentTicker = ticker;
+        loadData(ticker).then(() => {
+            d3.select("#main-chart").html("");
+            d3.select("#volume-chart").html("");
+            createCombinedCharts(filterIndex, ticker);
+            addTooltip();
+            createOpenPriceChart(ticker);
+            showRelevantView("indexes");
+            updateStructureCharts(ticker);
+        });
+    }
+    else {
+        showToast("К сожалению, тикер с таким названием не был найден");
+    }
+}
+
+//Prepares and validates the data for charting
+//@param {Array} data - The raw data to prepare
+//@returns {Array} The prepared and validated data
+function prepareData(data) {
+    if (!Array.isArray(data)) {
+        console.error("Invalid data format - expected array!");
+        return [];
+    }
+
+    return data.map(d => {
+        try {
+            const beginDate = new Date(d.begin);
+            if (isNaN(beginDate.getTime())) {
+                console.warn("Invalid date:", d.begin);
+                return null;
+            }
+
+            return {
+                begin: beginDate,
+                open: +d.open || 0,
+                close: +d.close || 0,
+                high: +d.high || 0,
+                low: +d.low || 0,
+                volume: +d.volume || 0,
+                value: +d.value || 0,
+                type: (+d.close || 0) >= (+d.open || 0) ? 'bullish' : 'bearish',
+                ticker: d.STOCK_TICK || d.INDEX_TICK || 'UNKNOWN'
+            };
+        } catch (error) {
+            console.error("Error processing data item:", d, error);
+            return null;
+        }
+    }).filter(item => item !== null);
+}
+
+//Sets up scales for the charts based on the data
+//@param {Array} data - The chart data
+//@param {number} width - The width of the chart
+//@param {number} mainHeight - The height of the main chart
+//@param {number} volumeHeight - The height of the volume chart
+
+function setupScales(data, width, mainHeight, volumeHeight) {
+    if (!data || data.length === 0) return;
+    
+    const mainMargin = config.mainChart.margin;
+    const volumeMargin = config.volumeChart.margin;
+    
+    const dateExtent = d3.extent(data, d => d.begin);
+    xMainScale = d3.scaleTime()
+        .domain(dateExtent)
+        .range([mainMargin.left, width - mainMargin.right]);
+    
+    xVolumeScale = d3.scaleTime()
+        .domain(dateExtent)
+        .range([volumeMargin.left, width - volumeMargin.right]);
+
+    const pricePadding = 0.01;
+    const priceExtent = [
+        d3.min(data, d => d.low) * (1 - pricePadding),
+        d3.max(data, d => d.high) * (1 + pricePadding)
+    ];
+    yMainScale = d3.scaleLinear()
+        .domain(priceExtent)
+        .range([mainHeight - mainMargin.bottom, mainMargin.top]);
+
+    const maxVolumeValue = d3.max(data, d => d.volume || d.value || 0);
+    const volumePadding = 0.1;
+    yVolumeScale = d3.scaleLinear()
+        .domain([0, maxVolumeValue * (1 + volumePadding)])
+        .range([volumeHeight - volumeMargin.bottom, volumeMargin.top]);
+}
+
+//Adjusts the number of x-axis ticks based on chart width
+//@param {Object} scale - The d3 scale object
+//@param {number} width - The width of the chart
+//@returns {Array} The adjusted tick values
 function adjustXTicks(scale, width) {
     const targetTickCount = 8;
     const approxTickInterval = width / targetTickCount;
@@ -266,129 +372,624 @@ function adjustXTicks(scale, width) {
     return adjustedTicks;
 }
 
+//Adds a tooltip to the main chart
+function addTooltip() {
+    d3.select("#main-chart .chart-tooltip").remove();
+    d3.select("#main-chart svg .tooltip-line").remove();
+    d3.select("#main-chart svg .mouse-tracker").remove();
+
+    const svg = d3.select("#main-chart svg");
+    const margin = config.mainChart.margin;
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    
+    const tooltip = d3.select("#main-chart")
+        .append("div")
+        .attr("class", "chart-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "#fff")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "4px")
+        .style("padding", "8px 12px")
+        .style("font-size", "12px")
+        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
+        .style("pointer-events", "none")
+        .style("z-index", "10");
+
+    const tooltipLine = svg.append("line")
+        .attr("class", "tooltip-line")
+        .attr("stroke", "#666")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3")
+        .style("opacity", 0);
+
+    const chartArea = {
+        x1: margin.left,
+        x2: width - margin.right,
+        y1: margin.top,
+        y2: height - margin.bottom
+    };
+
+    svg.append("rect")
+        .attr("class", "mouse-tracker")
+        .attr("x", chartArea.x1)
+        .attr("y", chartArea.y1)
+        .attr("width", chartArea.x2 - chartArea.x1)
+        .attr("height", chartArea.y2 - chartArea.y1)
+        .style("opacity", 0)
+        .style("pointer-events", "all")
+        .on("mouseover", function() {
+            tooltip.style("visibility", "visible");
+            tooltipLine.style("opacity", 1);
+        })
+        .on("mousemove", function(event) {
+            if (window.isDragging) return;
+            
+            const [x, y] = d3.pointer(event, this);
+            const date = xMainScale.invert(x);
+            
+            const bisect = d3.bisector(d => d.begin).left;
+            const idx = bisect(filteredData, date, 1);
+            const d = filteredData[idx - 1] || filteredData[idx];
+            
+            if (!d) return;
+            
+            d3.selectAll(".candle")
+                .select("rect")
+                .style("stroke", "none");
+            
+            d3.selectAll(".candle")
+                .filter(candle => candle.begin.getTime() === d.begin.getTime())
+                .select("rect")
+                .style("stroke", "#000")
+                .style("stroke-width", "1px");
+
+            const xPos = xMainScale(d.begin);
+            tooltipLine
+                .attr("x1", xPos)
+                .attr("x2", xPos)
+                .attr("y1", 0)
+                .attr("y2", height);
+            if (d.volume != 0){
+            tooltip.html(`
+                <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                <div style="margin-top: 6px;">
+                    <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                    <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                    <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                    <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                    <div>Объем: <strong>${d.volume.toLocaleString()}</strong></div>
+                </div>
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+            }else{
+                tooltip.html(`
+                    <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                    <div style="margin-top: 6px;">
+                        <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                        <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                        <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                        <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                        <div>Объем в рублях: <strong>${d.value.toLocaleString()}</strong></div>
+                    </div>
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+            }
+        })
+        .on("mouseout", function() {
+            tooltip.style("visibility", "hidden");
+            tooltipLine.style("opacity", 0);
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+        });
+}
+
+//Creates combined candlestick and volume charts
+//@param {Array} data - The data to display in the charts
+//@param {string} ticker - The ticker symbol being displayed
 function createCombinedCharts(data, ticker) {
-    const containerWidth = document.getElementById('chart-container').clientWidth;
-    const width = containerWidth - 20;
+    if (!data || data.length === 0) {
+        console.error("No data provided to create charts!");
+        return;
+    }
+
+    filteredData = prepareData(data);
+    if (filteredData.length === 0) {
+        console.error("Failed to prepare data for charts!");
+        return;
+    }
+
+    const mainChartContainer = document.getElementById('main-chart');
+    const volumeChartContainer = document.getElementById('volume-chart');
+    if (!mainChartContainer || !volumeChartContainer) {
+        console.error("Chart containers not found!");
+        return;
+    }
+
+    const container = document.getElementById('chart-container');
+    if (!container) {
+        console.error("Main container not found!");
+        return;
+    }
+    const width = container.clientWidth - 70;
+    
     const mainHeight = config.mainChart.height;
     const volumeHeight = config.volumeChart.height;
 
     d3.select("#main-chart").html("");
     d3.select("#volume-chart").html("");
 
-    const mainSvg = d3.select("#main-chart")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", mainHeight);
+    try {
+        const mainSvg = d3.select("#main-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", mainHeight);
+        const volumeSvg = d3.select("#volume-chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", volumeHeight);
 
-    const volumeSvg = d3.select("#volume-chart")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", volumeHeight);
-
-    setupScales(data, width, mainHeight, volumeHeight);
-    createCandlestickChart(mainSvg, data, width, mainHeight, ticker);
-    createVolumeChart(volumeSvg, data, width, volumeHeight);
-    addBrush(volumeSvg, data, width, volumeHeight);
+        setupScales(filteredData, width, mainHeight, volumeHeight);
+        
+        createCandlestickChart(mainSvg, filteredData, width, mainHeight, ticker);
+        createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
+        addTooltip(); 
+    } catch (error) {
+        console.error("Error while creating charts:", error);
+    }
 }
 
+//Creates a candlestick chart
+//@param {Object} svg - The d3 SVG element to draw the chart in
+//@param {Array} data - The data to display
+//@param {number} width - The width of the chart
+//@param {number} height - The height of the chart
+//@param {string} ticker - The ticker symbol being displayed
 function createCandlestickChart(svg, data, width, height, ticker) {
     svg.selectAll("*").remove();
 
-    let xAxis = d3.axisBottom(xMainScale)
-        .tickFormat(d3.timeFormat("%b %Y"))
-        .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right));
-    svg.selectAll(".candle")
+    const xOriginal = xMainScale.copy();
+    const yOriginal = yMainScale.copy();
+
+    svg.append("defs").append("clipPath")
+        .attr("id", "chart-clip")
+        .append("rect")
+        .attr("width", width - config.mainChart.margin.left - config.mainChart.margin.right)
+        .attr("height", height - config.mainChart.margin.top - config.mainChart.margin.bottom)
+        .attr("x", config.mainChart.margin.left)
+        .attr("y", config.mainChart.margin.top);
+
+    const chartGroup = svg.append("g")
+        .attr("class", "chart-group")
+        .attr("clip-path", "url(#chart-clip)");
+
+    const candles = chartGroup.selectAll(".candle")
         .data(data)
-        .enter()
-        .append("g")
+        .enter().append("g")
         .attr("class", "candle")
-        .attr("transform", d => `translate(${xMainScale(d.begin)},0)`)
-        .each(function(d) {
-            const g = d3.select(this);
-            const candleWidth = config.mainChart.candleWidth;
-            const halfWidth = candleWidth / 2;
-            
-            g.append("rect")
-                .attr("x", -halfWidth)
-                .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
-                .attr("width", candleWidth)
-                .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
-                .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
-            
-            g.append("line")
-                .attr("x1", 0)
-                .attr("x2", 0)
-                .attr("y1", yMainScale(d.high))
-                .attr("y2", yMainScale(d.low))
-                .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
-                .attr("stroke-width", 1);
-        });
+        .attr("transform", d => `translate(${xMainScale(d.begin)},0)`);
 
-    svg.append("g")
+    candles.each(function(d) {
+        const g = d3.select(this);
+        const candleWidth = config.mainChart.candleWidth;
+        const halfWidth = candleWidth / 2;
+        
+        g.append("rect")
+            .attr("x", -halfWidth)
+            .attr("y", d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
+            .attr("width", candleWidth)
+            .attr("height", Math.abs(yMainScale(d.open) - yMainScale(d.close)))
+            .attr("fill", d.type === 'bullish' ? '#436239' : '#c62f2d');
+        
+        g.append("line")
+            .attr("x1", 0)
+            .attr("x2", 0)
+            .attr("y1", yMainScale(d.high))
+            .attr("y2", yMainScale(d.low))
+            .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
+            .attr("stroke-width", 1);
+    });
+
+    const xAxis = svg.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${height - config.mainChart.margin.bottom})`)
-        .call(xAxis);
+        .attr("transform", `translate(0,${height - config.mainChart.margin.bottom})`);
 
-    svg.append("g")
+    const yAxis = svg.append("g")
         .attr("class", "y-axis")
-        .attr("transform", `translate(${config.mainChart.margin.left},0)`)
-        .call(d3.axisLeft(yMainScale));
-
+        .attr("transform", `translate(${config.mainChart.margin.left},0)`);
+    const company = tickerInfo.filter(d => d.ticker === ticker);
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.mainChart.margin.top / 2 + 12)
         .attr("text-anchor", "middle")
         .style("font-size", "18px")
         .style("font-weight", "700")
-        .text(`${ticker} - Свечной график`);
+        .text(`${`${company[0].name} (${company[0].ticker})`} - Свечной график`);
+
+    const zoom = d3.zoom()
+        .scaleExtent([1, 20])
+        .translateExtent([[0, 0], [width, height]])
+        .on("zoom", (event) => {
+            const newX = event.transform.rescaleX(xOriginal);
+            const newY = event.transform.rescaleY(yOriginal);
+
+            xMainScale.domain(newX.domain());
+            yMainScale.domain(newY.domain());
+
+            candles.attr("transform", d => `translate(${xMainScale(d.begin)},0)`);
+            candles.selectAll("rect")
+                .attr("y", d => d.type === 'bullish' ? yMainScale(d.close) : yMainScale(d.open))
+                .attr("height", d => Math.abs(yMainScale(d.open) - yMainScale(d.close)));
+            
+            candles.selectAll("line")
+                .attr("y1", d => yMainScale(d.high))
+                .attr("y2", d => yMainScale(d.low));
+
+            updateAxes();
+        });
+
+    svg.call(zoom);
+
+    updateAxes();
+
+    function updateAxes() {
+        xAxis.call(d3.axisBottom(xMainScale)
+            .tickFormat(d3.timeFormat("%b %Y"))
+            .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right)));
+        
+        yAxis.call(d3.axisLeft(yMainScale));
+    }
+
+    const resetButton = svg.append("g")
+    .attr("class", "zoom-reset")
+    .attr("transform", `translate(${width - 100},20)`)
+    .style("cursor", "pointer")
+    .on("mouseover", function() {
+        resetButton.select("rect")
+            .attr("fill", "#7a9a7f");
+        resetButton.select("text")
+            .attr("font-weight", "bold");
+    })
+    .on("mouseout", function() {
+        resetButton.select("rect")
+            .attr("fill", "#9baf9f");
+        resetButton.select("text")
+            .attr("font-weight", "700");
+    })
+    .on("click", resetZoom);
+
+    resetButton.append("rect")
+    .attr("width", 85)
+    .attr("height", 25)
+    .attr("fill", "#9baf9f")
+    .attr("rx", 10)
+    .attr("stroke", "#7a9a7f")
+    .attr("stroke-width", 0) 
+    .on("mouseover", function() {
+        d3.select(this)
+            .attr("stroke-width", 2);
+    })
+    .on("mouseout", function() {
+        d3.select(this)
+            .attr("stroke-width", 0);
+    });
+
+    resetButton.append("text")
+    .attr("x", 42)
+    .attr("y", 16)
+    .attr("fill", "white")
+    .attr("text-anchor", "middle")
+    .style("font-size", "10px")
+    .style("font-weight", "700")
+    .style("pointer-events", "none")
+    .text("Полный график");
+
+    function resetZoom() {
+        svg.transition()
+            .duration(300)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
+
+    addTooltipWithZoom(svg, width, height);
 }
 
+//Adds a tooltip with zoom functionality to the chart
+//@param {Object} svg - The d3 SVG element
+//@param {number} width - The width of the chart
+//@param {number} height - The height of the chart
+function addTooltipWithZoom(svg, width, height) {
+    d3.select("#main-chart .chart-tooltip").remove();
+    d3.select("#main-chart svg .tooltip-line").remove();
+    d3.select("#main-chart svg .mouse-tracker").remove();
+
+    const margin = config.mainChart.margin;
+    
+    const tooltip = d3.select("#main-chart")
+        .append("div")
+        .attr("class", "chart-tooltip")
+        .style("position", "absolute")
+        .style("visibility", "hidden")
+        .style("background", "#fff")
+        .style("border", "1px solid #ddd")
+        .style("border-radius", "4px")
+        .style("padding", "8px 12px")
+        .style("font-size", "12px")
+        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
+        .style("pointer-events", "none")
+        .style("z-index", "10");
+
+    const tooltipLine = svg.append("line")
+        .attr("class", "tooltip-line")
+        .attr("stroke", "#666")
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "3,3")
+        .style("opacity", 0);
+
+    const chartArea = {
+        x1: margin.left,
+        x2: width - margin.right,
+        y1: margin.top,
+        y2: height - margin.bottom
+    };
+
+    const tracker = svg.append("rect")
+        .attr("class", "mouse-tracker")
+        .attr("x", chartArea.x1)
+        .attr("y", chartArea.y1)
+        .attr("width", chartArea.x2 - chartArea.x1)
+        .attr("height", chartArea.y2 - chartArea.y1)
+        .style("opacity", 0)
+        .style("pointer-events", "all")
+        .on("mouseover", function() {
+            tooltip.style("visibility", "visible");
+            tooltipLine.style("opacity", 1);
+        })
+        .on("mousemove", function(event) {
+            if (window.isDragging) return;
+            
+            const [x, y] = d3.pointer(event, this);
+            
+            const date = xMainScale.invert(x);
+            
+            const bisect = d3.bisector(d => d.begin).left;
+            const idx = bisect(filteredData, date, 1);
+            const d = filteredData[idx - 1] || filteredData[idx];
+            
+            if (!d) return;
+            
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+            
+            d3.selectAll(".candle")
+                .filter(candle => candle.begin.getTime() === d.begin.getTime())
+                .select("rect")
+                .style("stroke", "#000")
+                .style("stroke-width", "1px");
+
+            const xPos = xMainScale(d.begin);
+            tooltipLine
+                .attr("x1", xPos)
+                .attr("x2", xPos)
+                .attr("y1", 0)
+                .attr("y2", height);
+
+            tooltip.html(`
+                <div><strong>${d3.timeFormat("%d %b %Y")(d.begin)}</strong></div>
+                <div style="margin-top: 6px;">
+                    <div>Открытие: <strong>${d.open.toFixed(2)}</strong></div>
+                    <div>Закрытие: <strong>${d.close.toFixed(2)}</strong></div>
+                    <div>Максимум: <strong>${d.high.toFixed(2)}</strong></div>
+                    <div>Минимум: <strong>${d.low.toFixed(2)}</strong></div>
+                    <div>Объем: <strong>${d.volume.toLocaleString()}</strong></div>
+                </div>
+            `)
+            .style("left", (event.pageX + 10) + "px")
+            .style("top", (event.pageY - 10) + "px");
+        })
+        .on("mouseout", function() {
+            tooltip.style("visibility", "hidden");
+            tooltipLine.style("opacity", 0);
+            d3.selectAll(".candle rect")
+                .style("stroke", "none");
+        });
+}
+
+//Creates a volume chart
+//@param {Object} svg - The d3 SVG element to draw the chart in
+//@param {Array} data - The data to display
+//@param {number} width - The width of the chart
+//@param {number} height - The height of the chart
 function createVolumeChart(svg, data, width, height) {
     svg.selectAll("*").remove();
-    const x = d3.scaleBand()
-    .domain(data.map(d => d.category))
-    .range([0, width])
-    .padding(0.2);
-    svg.selectAll(".volume-bar")
-        .data(data)
+    
+    const volumeData = data.map(d => ({
+        begin: d.begin,
+        volumeValue: d.volume || d.value || 0,
+        isIndex: !d.volume && d.value
+    }));
+
+    svg.append("defs").append("clipPath")
+        .attr("id", "volume-clip")
+        .append("rect")
+        .attr("width", width - config.volumeChart.margin.left - config.volumeChart.margin.right)
+        .attr("height", height - config.volumeChart.margin.top - config.volumeChart.margin.bottom)
+        .attr("x", config.volumeChart.margin.left)
+        .attr("y", config.volumeChart.margin.top);
+
+    const chartGroup = svg.append("g")
+        .attr("class", "volume-group")
+        .attr("clip-path", "url(#volume-clip)");
+
+    const xOriginal = xVolumeScale.copy();
+    const yOriginal = yVolumeScale.copy();
+
+    const bars = chartGroup.selectAll(".volume-bar")
+        .data(volumeData)
         .enter()
         .append("rect")
-        .attr("class", "volume-bar")
+        .attr("class", d => `volume-bar ${d.isIndex ? 'index-volume' : 'stock-volume'}`)
         .attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
-        .attr("y", d => yVolumeScale(d.volume))
+        .attr("y", d => yVolumeScale(d.volumeValue))
         .attr("width", config.mainChart.candleWidth)
-        .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volume))
-        .attr("fill", "#4285f4");
+        .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volumeValue))
+        .attr("fill", d => d.isIndex ? "#6a5acd" : "#4285f4");
 
-    svg.append("g")
+    const xAxis = svg.append("g")
         .attr("class", "x-axis")
         .attr("transform", `translate(0,${height - config.volumeChart.margin.bottom})`)
         .call(d3.axisBottom(xVolumeScale));
 
-    svg.append("g")
+    const yAxis = svg.append("g")
         .attr("class", "y-axis")
         .attr("transform", `translate(${config.volumeChart.margin.left},0)`)
-        .call(d3.axisLeft(yVolumeScale)
-        .ticks(7));
+        .call(d3.axisLeft(yVolumeScale).ticks(7));
 
     svg.append("text")
         .attr("x", width / 2)
         .attr("y", config.volumeChart.margin.top - 10)
         .attr("class", "volume-title")
         .style("font-size", "14px")
-        .text("Объем торгов");
+        .text(volumeData.some(d => d.isIndex) ? "Стоимость торгов" : "Объем торгов");
+
+    const zoom = d3.zoom()
+        .scaleExtent([1, 20])
+        .translateExtent([[0, 0], [width, height]])
+        .on("zoom", zoomed);
+
+    svg.call(zoom);
+
+    function zoomed(event) {
+
+        const newX = event.transform.rescaleX(xOriginal);
+        xVolumeScale.domain(newX.domain());
+
+        const visibleData = volumeData.filter(d => 
+            d.begin >= xVolumeScale.domain()[0] && 
+            d.begin <= xVolumeScale.domain()[1]
+        );
+
+        if (visibleData.length > 0) {
+            const maxVolume = d3.max(visibleData, d => d.volumeValue);
+            yVolumeScale.domain([0, maxVolume * 1.1]);
+        }
+
+        updateChart();
+    }
+
+    function updateChart() {
+        const barWidth = Math.max(
+            1,
+            (xVolumeScale(xVolumeScale.domain()[1]) - xVolumeScale(xVolumeScale.domain()[0])) / 
+            volumeData.length * 0.8
+        );
+
+        bars.attr("x", d => xVolumeScale(d.begin) - barWidth/2)
+            .attr("width", barWidth)
+            .attr("y", d => yVolumeScale(d.volumeValue))
+            .attr("height", d => height - config.volumeChart.margin.bottom - yVolumeScale(d.volumeValue));
+
+        xAxis.call(d3.axisBottom(xVolumeScale));
+        yAxis.call(d3.axisLeft(yVolumeScale).ticks(5));
+    }
+
+    const resetButton = svg.append("g")
+    .attr("class", "zoom-reset")
+    .attr("transform", `translate(${width - 100},20)`)
+    .style("cursor", "pointer")
+    .on("mouseover", function() {
+        resetButton.select("rect")
+            .attr("fill", "#7a9a7f");
+        resetButton.select("text")
+            .attr("font-weight", "bold");
+    })
+    .on("mouseout", function() {
+        resetButton.select("rect")
+            .attr("fill", "#9baf9f");
+        resetButton.select("text")
+            .attr("font-weight", "700");
+    })
+    .on("click", resetZoom);
+
+    resetButton.append("rect")
+    .attr("width", 85)
+    .attr("height", 25)
+    .attr("fill", "#9baf9f")
+    .attr("rx", 10)
+    .attr("stroke", "#7a9a7f")
+    .attr("stroke-width", 0)
+    .on("mouseover", function() {
+        d3.select(this)
+            .attr("stroke-width", 2);
+    })
+    .on("mouseout", function() {
+        d3.select(this)
+            .attr("stroke-width", 0);
+    });
+
+    resetButton.append("text")
+    .attr("x", 42)
+    .attr("y", 16)
+    .attr("fill", "white")
+    .attr("text-anchor", "middle")
+    .style("font-size", "10px")
+    .style("font-weight", "700")
+    .style("pointer-events", "none")
+    .text("Полный график");
+
+    function resetZoom() {
+        svg.transition()
+            .duration(300)
+            .call(zoom.transform, d3.zoomIdentity);
+    }
 }
 
+//Adds company/info information to the UI
+//@param {string} type - The type of security ('stocks' or 'indexes')
+//@param {string} tickerName - The ticker symbol
+function addInfo(type, tickerName) {
+    const typeName = type === "stocks" ? "Акция" : "Индекс";
+    const containerId = type === "stocks" ? "#company_info_stocks" : "#company_info_other";
+    const container = d3.select(containerId);
+    container.selectAll("*").remove();
+    
+    const infoBox = container.append("div")
+        .attr("class", "company-info-box");
+
+    const company = tickerInfo.filter(d => d.ticker === tickerName);
+    if (company) {
+        infoBox.append("h3")
+            .text(`${company[0].name} (${company[0].ticker})`);
+        
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Сектор:</span> ${company[0].sector}`);
+
+        infoBox.append("div")
+            .attr("class", "info-row")
+            .html(`<span class="label">Тип:</span> ${typeName}\n`);
+        
+        infoBox.append("div")
+            .attr("class", "info-description")
+            .text(company[0].description);
+
+    } else {
+        infoBox.append("div")
+            .attr("class", "no-data")
+            .text(`Нет информации по ${tickerName}`);
+    }
+
+}
+
+//Creates a dividend chart
+//@param {Array} data - The dividend data to display
 function createDividend(data) {
     if (data.length > 0) {
         const container = d3.select("#additional_content");
         container.selectAll("*").remove();
-        
-        // Set container to occupy half of parent width
-        container.style("width", "50%");
-        container.style("margin-left", "2.5%");
-        
-        // Create tooltip
+
         const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
             .style("opacity", 0)
@@ -399,11 +1000,10 @@ function createDividend(data) {
             .style("border-radius", "4px")
             .style("pointer-events", "none");
 
-        // Get the adjusted container width
         const containerWidth = container.node().getBoundingClientRect().width;
-        const width = containerWidth;
+        const width = containerWidth - 40;
         const height = 400;
-        const margin = {top: 40, right: 20, bottom: 100, left: 60};
+        const margin = {top: 40, right: 30, bottom: 100, left: 60};
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
         const timeFormat = d3.timeFormat("%b %Y");
@@ -414,14 +1014,12 @@ function createDividend(data) {
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // Process data
         const processedData = data.map(d => ({
             name: timeFormat(new Date(d.registryclosedate)),
             value: parseFloat(d.value),
             currency: d.currencyid
         }));
 
-        // Create scales
         const x = d3.scaleBand()
             .domain(processedData.map(d => d.name))
             .range([0, innerWidth])
@@ -432,17 +1030,19 @@ function createDividend(data) {
             .nice()
             .range([innerHeight, 0]);
 
-        // Custom color palette
         const colorPalette = [
-            "#214517", // dark green
-            "#9baf9f", // gray-green
-            "#c62f2d", // red
-            "#e5ac9d", // light pink
-            "#638159", //light green
-            "#cbc8c9" // very light gray
+            "#e18d6e",
+            "#d08cb5",
+            "#9b7ab2",
+            "#8584bd",
+            "#87adda",
+            "#7cbbc6",
+            "#86bf9e",
+            "#beda97",
+            "#f8f19f",
+            "#f0c486"
         ];
 
-        // Add Y-axis with grid lines
         svg.append("g")
             .attr("class", "y-axis")
             .call(d3.axisLeft(y)
@@ -454,7 +1054,6 @@ function createDividend(data) {
                 .attr("stroke-opacity", 0.1)
             );
 
-        // Add bars with custom colors and hover effects
         svg.selectAll(".bar")
             .data(processedData)
             .enter().append("rect")
@@ -492,7 +1091,6 @@ function createDividend(data) {
                     .style("opacity", 0);
             });
 
-        // Add X-axis with rotated labels
         svg.append("g")
             .attr("class", "x-axis")
             .attr("transform", `translate(0,${innerHeight})`)
@@ -504,7 +1102,6 @@ function createDividend(data) {
             .attr("dy", ".15em")
             .style("font-size", "10px");
     
-        // Add chart title
         svg.append("text")
             .attr("x", innerWidth / 2 - 25)
             .attr("y", -13)
@@ -513,13 +1110,14 @@ function createDividend(data) {
             .style("font-weight", "bold")
             .text(`Дивиденды ${data[0].DIV_TICK} (${data[0].currencyid})`);
 
-        // Add X-axis label
         svg.append("text")
             .attr("x", innerWidth / 2 - 30)
             .attr("y", innerHeight + margin.bottom - 40)
             .attr("text-anchor", "middle")
             .style("font-size", "12px")
             .text("Год");
+            
+        addInfo("stocks", data[0].DIV_TICK)
 
     } else {
         const container = document.getElementById('additional_content');
@@ -534,30 +1132,10 @@ function createDividend(data) {
     }
 }
 
-function addBrush(svg, data, width, height) {
-    brush = d3.brushX()
-        .extent([[config.volumeChart.margin.left, config.volumeChart.margin.top], 
-                [width - config.volumeChart.margin.right, height - config.volumeChart.margin.bottom]])
-        .on("brush end", brushed);
-
-    svg.append("g")
-        .attr("class", "brush")
-        .call(brush);
-
-    function brushed(event) {
-        if (!event.selection) return;
-        
-        const [x0, x1] = event.selection;
-        const date0 = xVolumeScale.invert(x0);
-        const date1 = xVolumeScale.invert(x1);
-        
-        const filtered = allData.filter(d => d.begin >= date0 && d.begin <= date1);
-        updateMainChart(filtered);
-    }
-}
-
-function updateStructureCharts() {
-    const selectedIndex = document.getElementById("index-select").value;
+//Updates the structure charts for a given index
+//@param {string} chosenVal - The index ticker symbol
+function updateStructureCharts(chosenVal) {
+    const selectedIndex = chosenVal.toUpperCase();
     const tickerData = processTickerData(selectedIndex);
     const sectorData = processSectorData(selectedIndex);
     
@@ -566,18 +1144,21 @@ function updateStructureCharts() {
                      selectedIndex;
                      
     if (tickerData.length > 0) {
-        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, indexName);
+        createPieChart(tickerData, "pie-chart", `${indexName} (состав портфеля)`, selectedIndex);
     } else {
         d3.select("#pie-chart").html("<p>No ticker data available</p>");
     }
     
     if (sectorData.length > 0) {
-        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, indexName);
+        createBarChart(sectorData, "bar-chart", `${indexName} (отраслевая структура)`, selectedIndex);
     } else {
         d3.select("#bar-chart").html("<p>No sector data available</p>");
     }
 }
 
+//Processes ticker composition data for an index
+//@param {string} index - The index ticker symbol
+//@returns {Array} Processed ticker data
 function processTickerData(index) {
     if (!moexData.composition[index] || !moexData.composition[index].composition) {
         console.warn(`No composition data for ${index}`);
@@ -592,6 +1173,9 @@ function processTickerData(index) {
         }));
 }
 
+//Processes sector composition data for an index
+//@param {string} index - The index ticker symbol
+//@returns {Array} Processed sector data
 function processSectorData(index) {
     if (!moexData.sectors || !moexData.sectors[index] || !moexData.sectors[index].sector_weights) {
         console.warn(`No sector data for ${index}`);
@@ -606,6 +1190,11 @@ function processSectorData(index) {
         .filter(d => d.value > 0);
 }
 
+//Creates a pie chart showing index composition
+//@param {Array} data - The data to display
+//@param {string} containerId - The ID of the container element
+//@param {string} title - The chart title
+//@param {string} indexName - The index name
 function createPieChart(data, containerId, title, indexName) {
     const container = d3.select(`#${containerId}`);
     container.selectAll("*").remove();
@@ -638,12 +1227,16 @@ function createPieChart(data, containerId, title, indexName) {
     .style("font-size", "12px");
 
     const colorPalette = [
-        "#214517", // dark green
-        "#9baf9f", // gray-green
-        "#c62f2d", // red
-        "#e5ac9d", // light pink
-        "#638159", //light green
-        "#cbc8c9" // very light gray
+        "#e18d6e",
+        "#d08cb5",
+        "#9b7ab2",
+        "#8584bd",
+        "#87adda",
+        "#7cbbc6",
+        "#86bf9e",
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
     ];
     
     svg.selectAll("path")
@@ -704,17 +1297,24 @@ function createPieChart(data, containerId, title, indexName) {
     .style("font-size", "12px");
     }
 
+//Creates a bar chart showing sector composition
+//@param {Array} data - The data to display
+//@param {string} containerId - The ID of the container element
+//@param {string} title - The chart title
+//@param {string} indexName - The index name
 function createBarChart(data, containerId, title, indexName) {
 
     const container = d3.select(`#${containerId}`);
     container.selectAll("*").remove();
 
     const containerWidth = container.node().getBoundingClientRect().width;
-    const width = containerWidth - 40;
+    const width = containerWidth;
     const height = 400;
     const margin = {top: 40, right: 30, bottom: 100, left: 60};
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
+
+    addInfo("indexes", indexName)
 
     const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
@@ -727,12 +1327,16 @@ function createBarChart(data, containerId, title, indexName) {
     .style("pointer-events", "none");
 
     const colorPalette = [
-        "#214517", // dark green
-        "#9baf9f", // gray-green
-        "#c62f2d", // red
-        "#e5ac9d", // light pink
-        "#638159", //light green
-        "#cbc8c9" // very light gray
+        "#e18d6e",
+        "#d08cb5",
+        "#9b7ab2",
+        "#8584bd",
+        "#87adda",
+        "#7cbbc6",
+        "#86bf9e",
+        "#beda97",
+        "#f8f19f",
+        "#f0c486"
     ];
 
     const svg = container.append("svg")
@@ -757,12 +1361,12 @@ function createBarChart(data, containerId, title, indexName) {
     svg.append("g")
         .attr("class", "y-axis")
         .call(d3.axisLeft(y)
-            .tickSize(-innerWidth) // Add grid lines across width
+            .tickSize(-innerWidth)
             .tickFormat(d => `${d} %`)
         )
-        .call(g => g.select(".domain").remove()) // Remove axis line
+        .call(g => g.select(".domain").remove())
         .call(g => g.selectAll(".tick line")
-            .attr("stroke-opacity", 0.1) // Make grid lines subtle
+            .attr("stroke-opacity", 0.1)
         );
 
     svg.selectAll(".bar")
@@ -794,14 +1398,14 @@ function createBarChart(data, containerId, title, indexName) {
         .attr("transform", `translate(0,${innerHeight})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .attr("transform", "rotate(-45)")
+        .attr("transform", "rotate(-25)")
         .attr("text-anchor", "end")
         .attr("dx", "-.8em")
         .attr("dy", ".15em")
         .style("font-size", "10px");
 
     svg.append("text")
-        .attr("x", 220)
+        .attr("x", 600)
         .attr("y", -20)
         .attr("text-anchor", "middle")
         .text(title)
@@ -813,7 +1417,7 @@ function createBarChart(data, containerId, title, indexName) {
     .enter()
     .append("g")
     .attr("class", "legend")
-    .attr("transform", (d, i) => `translate(${innerWidth - 200},${20 + i * 20})`);
+    .attr("transform", (d, i) => `translate(${innerWidth - 300},${20 + i * 20})`);
 
     legend.append("rect")
     .attr("width", 16)
@@ -824,7 +1428,7 @@ function createBarChart(data, containerId, title, indexName) {
 
     legend.append("text")
     .attr("x", 5)
-    .attr("y", -20)
+    .attr("y", -17.5)
     .text(d => `${d.name} (${d.value.toFixed(1)}%)`)
     .style("font-size", "12px");
 }
@@ -833,38 +1437,43 @@ const tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-document.getElementById("index-select").addEventListener("change", updateStructureCharts);
-
+//Updates the main chart with filtered data
+//@param {Array} filteredData - The filtered data to display
 function updateMainChart(filteredData) {
     this.filteredData = filteredData;
 
     xMainScale.domain(d3.extent(filteredData, d => d.begin));
+    xVolumeScale.domain(xMainScale.domain());
+    
     yMainScale.domain([d3.min(filteredData, d => d.low) * 0.99, 
                       d3.max(filteredData, d => d.high) * 1.01]);
+    
+    yVolumeScale.domain([0, d3.max(filteredData, d => d.volume)]);
 
     const mainSvg = d3.select("#main-chart svg");
+    const volumeSvg = d3.select("#volume-chart svg");
     const width = document.getElementById('chart-container').clientWidth - 20;
     
     const xAxis = d3.axisBottom(xMainScale)
         .tickFormat(d3.timeFormat("%b %Y"))
         .tickValues(adjustXTicks(xMainScale, width - config.mainChart.margin.left - config.mainChart.margin.right));
     
-    xMainScale.domain(d3.extent(filteredData, d => d.begin));
-    yMainScale.domain([d3.min(filteredData, d => d.low) * 0.99, 
-                      d3.max(filteredData, d => d.high) * 1.01]);
-
-
     mainSvg.select(".x-axis")
         .call(xAxis);
 
     mainSvg.select(".y-axis")
         .call(d3.axisLeft(yMainScale));
 
+    volumeSvg.select(".x-axis")
+        .call(d3.axisBottom(xVolumeScale));
+
+    volumeSvg.select(".y-axis")
+        .call(d3.axisLeft(yVolumeScale).ticks(7));
+
     const candles = mainSvg.selectAll(".candle")
         .data(filteredData);
 
     candles.exit().remove();
-
 
     candles.attr("transform", d => `translate(${xMainScale(d.begin)},0)`)
         .select("rect")
@@ -899,8 +1508,28 @@ function updateMainChart(filteredData) {
                 .attr("stroke", d.type === 'bullish' ? '#436239' : '#c62f2d')
                 .attr("stroke-width", 1);
         });
+
+    const volumes = volumeSvg.selectAll(".volume-bar")
+        .data(filteredData);
+
+    volumes.exit().remove();
+
+    volumes.attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
+        .attr("y", d => yVolumeScale(d.volume))
+        .attr("height", d => volumeSvg.attr("height") - config.volumeChart.margin.bottom - yVolumeScale(d.volume));
+
+    volumes.enter()
+        .append("rect")
+        .attr("class", "volume-bar")
+        .attr("x", d => xVolumeScale(d.begin) - config.mainChart.candleWidth/2)
+        .attr("y", d => yVolumeScale(d.volume))
+        .attr("width", config.mainChart.candleWidth)
+        .attr("height", d => volumeSvg.attr("height") - config.volumeChart.margin.bottom - yVolumeScale(d.volume))
+        .attr("fill", "#4285f4");
+    addTooltip()
 }
 
+//Sets up period filter buttons
 function setupPeriodButtons() {
     d3.selectAll(".period-btn").on("click", function() {
         d3.selectAll(".period-btn").classed("active", false);
@@ -909,10 +1538,12 @@ function setupPeriodButtons() {
     });
 }
 
+//Filters the data by the selected period
+//@param {string} period - The period to filter by ('month', 'year', 'all')
 function filterDataByPeriod(period) {
     let filtered = [...allData];
+    if (filtered.length !== 0){
     const lastDate = new Date(allData[allData.length - 1].begin);
-    
     if (period === "month") {
         const monthAgo = new Date(lastDate);
         monthAgo.setMonth(monthAgo.getMonth() - 1);
@@ -923,21 +1554,71 @@ function filterDataByPeriod(period) {
         yearAgo.setFullYear(yearAgo.getFullYear() - 1);
         filtered = allData.filter(d => d.begin >= yearAgo);
     }
-    
+}
+    if (filtered.length === 0){
+        
+        filteredData = [...filterIndex]
+        filteredData = prepareData(filteredData)
+        Data_i = prepareData(allDataIndex)
+        lastDate = new Date(Data_i[Data_i.length - 1].begin);
+        filtered = [...Data_i]
+        if (period === "month") {
+            const monthAgo = new Date(lastDate);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            filtered = Data_i.filter(d => d.begin >= monthAgo);
+        } 
+        else if (period === "year") {
+            const yearAgo = new Date(lastDate);
+            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+            filtered = Data_i.filter(d => d.begin >= yearAgo);
+        }
+    }
+    addTooltip();
     updateChartsWithData(filtered);
 }
 
+//Updates charts with filtered data
+//@param {Array} data - The filtered data to display
 function updateChartsWithData(data) {
-    filteredData = data;
-    updateMainChart(data);
+    if (!data || data.length === 0) return;
     
+    filteredData = prepareData(data);
+    
+    const container = document.getElementById('chart-container');
+    if (!container) return;
+    
+    const width = container.clientWidth - 70;
+    const mainHeight = config.mainChart.height;
+    const volumeHeight = config.volumeChart.height;
+    
+    setupScales(filteredData, width, mainHeight, volumeHeight);
+    
+    d3.select("#main-chart svg").remove();
+    d3.select("#volume-chart svg").remove();
+    
+    const mainSvg = d3.select("#main-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", mainHeight);
+        
+    const volumeSvg = d3.select("#volume-chart")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", volumeHeight);
+    
+    createCandlestickChart(mainSvg, filteredData, width, mainHeight, currentTicker);
+    createVolumeChart(volumeSvg, filteredData, width, volumeHeight);
+    addTooltip();
     if (brush) {
         d3.select("#volume-chart svg .brush").call(brush.move, null);
     }
+    addTooltip();
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
 
+//Creates an open price chart for the given ticker
+//@param {string} tickerName - The ticker symbol to display
 function createOpenPriceChart(tickerName) {
     currentTicker = tickerName;
     let tickerData = allData.filter(item => item.STOCK_TICK === tickerName);
@@ -1023,9 +1704,9 @@ function createOpenPriceChart(tickerName) {
     let currentPriceType = "open";
     let currentPeriod = "5y";
 
-    const width = container.node().getBoundingClientRect().width - 300
-    const height = 310;
-    const margin = {top: 50, right: 100, bottom: 0, left: 150};
+    const width = container.node().getBoundingClientRect().width/1.22
+    const height = 360;
+    const margin = {top: 25, bottom: 0, left: 80};
     const innerWidth = width;
     const innerHeight = height;
 
@@ -1045,7 +1726,7 @@ function createOpenPriceChart(tickerName) {
     const path = svg.append("path")
         .attr("class", "price-line")
         .attr("fill", "none")
-        .attr("stroke", "#214517")
+        .attr("stroke", "#9baf9f")
         .attr("stroke-width", 2);
 
     const focus = svg.append("g")
@@ -1075,7 +1756,7 @@ function createOpenPriceChart(tickerName) {
 
     const xAxis = svg.append("g")
         .attr("class", "x-axis")
-        .attr("transform", `translate(0,${innerHeight})`);
+        .attr("transform", `translate(0,${innerHeight})`)
 
     const yAxis = svg.append("g")
         .attr("class", "y-axis");
@@ -1086,13 +1767,6 @@ function createOpenPriceChart(tickerName) {
         .attr("text-anchor", "middle")
         .style("font-size", "16px")
         .style("font-weight", "bold");
-
-    svg.append("text")
-        .attr("class", "x-axis-label")
-        .attr("x", innerWidth / 2)
-        .attr("y", innerHeight + 35)
-        .attr("text-anchor", "middle")
-        .text("Дата");
 
     const yAxisLabel = svg.append("text")
         .attr("class", "y-axis-label")
@@ -1125,7 +1799,7 @@ function createOpenPriceChart(tickerName) {
         path.datum(periodData)
             .transition()
             .duration(500)
-            .attr("d", line);
+            .attr("d", line)
 
         let xAxisFormatter;
         let tickValues;
@@ -1161,7 +1835,12 @@ function createOpenPriceChart(tickerName) {
         }
 
         xAxis.transition().duration(500)
-            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter);
+            .call(tickValues ? xAxisFormatter.tickValues(tickValues) : xAxisFormatter)
+            .selectAll("text")
+            .style("text-anchor", "end")
+            .attr("dx", "-.8em")
+            .attr("dy", ".15em")
+            .attr("transform", "rotate(-35)"); 
         
         yAxis.transition().duration(500)
             .call(d3.axisLeft(y));
@@ -1191,7 +1870,7 @@ function createOpenPriceChart(tickerName) {
 
     function mousemove(event) {
         const periodData = filterByPeriodEx(tickerData, currentPeriod);
-        const x0 = x.invert(d3.pointer(event)[0]);
+        const x0 = x.invert(d3.pointer(event, this)[0]);
         const i = bisectDate(periodData, x0, 1);
         const d0 = periodData[i - 1];
         const d1 = periodData[i];
@@ -1205,21 +1884,35 @@ function createOpenPriceChart(tickerName) {
             low: "Минимум"
         };
         
-        focus.attr("transform", `translate(${x(d.begin)},${y(d[currentPriceType])})`);
+        const xPos = x(d.begin);
+        const yPos = y(d[currentPriceType]);
+        focus.attr("transform", `translate(${xPos},${yPos})`);
         
         const tooltipText = focus.select("text.tooltip-text")
-            .html("");
+            .html("")
+            .attr("transform", "translate(0,20)");
         
-        tooltipText.selectAll("tspan")
-            .data([
-                `${priceLabels[currentPriceType]} ${formattedDate}:`,
-                `${d[currentPriceType].toFixed(2)}`
-            ])
-            .enter()
-            .append("tspan")
+        tooltipText.append("tspan")
             .attr("x", 10)
-            .attr("dy", (d, i) => i ? "1.2em" : 0)
-            .text(d => d);
+            .attr("dy", "0")
+            .text(`${priceLabels[currentPriceType]} ${formattedDate}:`);
+        
+        tooltipText.append("tspan")
+            .attr("x", 10)
+            .attr("dy", "1.2em")
+            .text(`${d[currentPriceType].toFixed(2)} руб.`);
+        
+        const textBBox = tooltipText.node().getBBox();
+        let tooltipX = 10;
+        let textAnchor = "start";
+        
+        if (xPos > innerWidth - textBBox.width - 20) {
+            tooltipX = -10;
+            textAnchor = "end";
+        }
+        
+        tooltipText.attr("transform", `translate(${tooltipX},20)`)
+                  .attr("text-anchor", textAnchor);
     }
 
     const bisectDate = d3.bisector(d => d.begin).left;
@@ -1233,6 +1926,8 @@ function createOpenPriceChart(tickerName) {
     }
 }
 
+//Sets up filter controls for the open price chart
+//@param {string} tickerName - The ticker symbol
 function setupFilterControls(tickerName) {
     const chartContainer = document.getElementById('open-price-chart-container');
     
@@ -1240,13 +1935,13 @@ function setupFilterControls(tickerName) {
     const isInd = tickerSets.indices.includes(tickerName);
     const initialFilter = isInd ? "indices" : "stocks";
     filterContainer.className = "filter-container";
-    filterContainer.style.margin = "10px 0";
+    filterContainer.style.margin = "10px 20px";
     filterContainer.style.display = "flex";
     filterContainer.style.alignItems = "center";
     filterContainer.style.gap = "10px";
 
     filterContainer.innerHTML = `
-        <span>Показать:</span>
+        <span>Показать популярные:</span>
         <button id="stocks-filter" class="filter-btn ${!isInd ? 'active' : ''}">Акции</button>
         <button id="indices-filter" class="filter-btn ${isInd? 'active' : ''}">Индексы</button>
         <div id="ticker-buttons" class="ticker-buttons"></div>
@@ -1266,6 +1961,8 @@ function setupFilterControls(tickerName) {
     updateOpenPriceChartTickerButtons(initialFilter);
 }
 
+//Handles filter changes for the open price chart
+//@param {string} type - The filter type ('stocks' or 'indices')
 function handleOpenPriceChartFilter(type) {
     d3.selectAll('#open-price-chart-container .filter-btn')
         .classed("active", function() {
@@ -1278,6 +1975,8 @@ function handleOpenPriceChartFilter(type) {
         .dataset.currentFilter = type;
 }
 
+//Updates ticker buttons for the open price chart based on filter
+//@param {string} type - The filter type ('stocks' or 'indices')
 function updateOpenPriceChartTickerButtons(type) {
     const buttonsContainer = document.querySelector('#open-price-chart-container #ticker-buttons');
     buttonsContainer.innerHTML = "";
@@ -1318,6 +2017,9 @@ function updateOpenPriceChartTickerButtons(type) {
         });
 }
 
+//Shows price information when hovering over a ticker button
+//@param {HTMLElement} buttonElement - The button element
+//@param {string} ticker - The ticker symbol
 function showTickerPriceInfo(buttonElement, ticker) {
     const dataset = tickerSets.stocks.includes(ticker) ? allData : allDataIndex;
     const tickerData = dataset.filter(d => 
@@ -1330,8 +2032,6 @@ function showTickerPriceInfo(buttonElement, ticker) {
     const latestData = tickerData[tickerData.length - 1];
     const prevClose = tickerData.length > 1 ? 
         tickerData[tickerData.length - 2].close : latestData.open;
-        console.log(prevClose)
-    console.log(prevClose)
     const change = latestData.close - prevClose;
     const changePercent = (change / prevClose * 100).toFixed(2);
     
@@ -1348,6 +2048,8 @@ function showTickerPriceInfo(buttonElement, ticker) {
     hoverInfo.style("opacity", 1);
 }
 
+//Updates ticker buttons based on type
+//@param {string} type - The type of tickers ('stocks' or 'indices')
 function updateTickerButtons(type) {
     const buttonsContainer = document.getElementById("ticker-buttons");
     buttonsContainer.innerHTML = "";
@@ -1359,10 +2061,53 @@ function updateTickerButtons(type) {
         btn.addEventListener("click", () => {
             loadData(ticker).then(() => {
                 createCombinedCharts(filteredData, ticker);
+                addTooltip();
                 createDividend(filter_dividends);
                 createOpenPriceChart(ticker);
             });
         });
         buttonsContainer.appendChild(btn);
     });
+}
+
+//Shows a toast notification
+//@param {string} message - The message to display
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+  
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 2000);
+  }
+
+//Shows the relevant view based on search input
+//@param {string} searchInput - The search input type ('stocks' or 'indexes')
+function showRelevantView(searchInput) {
+
+    const stockView = document.getElementById('stock-column');
+    const indexView = document.getElementById('index-column');
+    const barChart = document.getElementById('bar-chart');
+    const container = document.getElementById('stock-view');
+  
+    stockView.classList.remove('active');
+    indexView.classList.remove('active');
+    container.classList.remove('index-view-active');
+
+    let isStock, isIndex;
+    if (searchInput == "stocks") {
+        isStock = true;
+    } else if (searchInput == "indexes") {
+        isIndex = true;
+    }
+
+    if (isStock) {
+        stockView.classList.add('active');
+    } else if (isIndex) {
+        indexView.classList.add('active');
+        container.classList.add('index-view-active');
+    }
+
+    document.getElementById('open-price-chart-container').style.display = 'flex';
 }
